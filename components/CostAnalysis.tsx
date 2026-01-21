@@ -311,7 +311,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
 
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between border-b border-stone-100 dark:border-stone-800 no-print">
+      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm flex items-center justify-between border-b border-stone-100 dark:border-stone-800 no-print">
         <button onClick={onBack} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition">
            <Icons.Back className="text-stone-600 dark:text-stone-400" />
         </button>

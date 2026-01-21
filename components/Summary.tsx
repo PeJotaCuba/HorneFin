@@ -118,12 +118,12 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
 
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800 no-print">
+      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 no-print">
         <div className="flex justify-between items-center">
             <div>
-                <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-                <span className="bg-red-600 text-white p-1.5 rounded-lg">
-                    <Icons.PieChart size={20} />
+                <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                <span className="bg-red-600 text-white p-1 rounded-lg">
+                    <Icons.PieChart size={18} />
                 </span>
                 {t.summaryTitle}
                 </h1>

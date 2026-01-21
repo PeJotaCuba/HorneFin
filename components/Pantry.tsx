@@ -53,16 +53,16 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
 
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-          <span className="bg-amber-500 text-white p-1.5 rounded-lg">
-             <Icons.Money size={20} />
+      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800">
+        <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+          <span className="bg-amber-500 text-white p-1 rounded-lg">
+             <Icons.Money size={18} />
           </span>
           {t.pantryTitle}
         </h1>
         <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.pantrySubtitle}</p>
         
-        <div className="mt-4 relative">
+        <div className="mt-3 relative">
           <Icons.Search className="absolute left-3 top-2.5 text-stone-400" size={16} />
           <input 
             type="text" 

@@ -6,22 +6,27 @@ import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
 import { Shopping } from './components/Shopping';
 import { NavBar } from './components/NavBar';
+import { Logo } from './components/Logo';
+import { Header } from './components/Header';
 import { TRANSLATIONS, Language } from './utils/translations';
 import { normalizeKey } from './utils/units';
 
 // Componente Splash Screen
 const SplashScreen = () => (
   <div className="fixed inset-0 bg-[#FDFBF7] flex flex-col items-center justify-center z-[100]">
-    <div className="relative mb-8">
+    <div className="relative mb-8 flex flex-col items-center">
        {/* Círculo decorativo de fondo */}
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-amber-100 rounded-full blur-xl opacity-60"></div>
-       <img src="/logo.png" alt="HorneFin" className="w-48 h-auto object-contain relative z-10 animate-pulse" />
+       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-100 rounded-full blur-xl opacity-60"></div>
+       
+       {/* Logo Vectorial Animado */}
+       <div className="relative z-10 animate-pulse">
+         <Logo className="w-56 h-auto" />
+       </div>
     </div>
     
-    <div className="w-64 h-2 bg-stone-200 rounded-full overflow-hidden">
+    <div className="w-64 h-2 bg-stone-200 rounded-full overflow-hidden mt-4">
       <div className="h-full bg-gradient-to-r from-amber-500 to-red-500 animate-loading rounded-full"></div>
     </div>
-    <p className="mt-4 text-stone-500 text-sm font-medium tracking-widest uppercase">Gestiona tu repostería</p>
   </div>
 );
 
@@ -149,6 +154,18 @@ export default function App() {
   return (
     <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-[#FAFAF9]'}`}>
       
+      {/* GLOBAL HEADER - Persistent */}
+      <Header 
+        darkMode={darkMode}
+        toggleDarkMode={() => setDarkMode(!darkMode)}
+        language={language}
+        setLanguage={setLanguage}
+        onDownloadBackup={handleDownloadBackup}
+        onRestoreBackup={handleRestoreBackup}
+        isCompact={currentView !== AppView.DASHBOARD}
+        t={t}
+      />
+
       {/* Views Container */}
       <div className="h-full">
         {currentView === AppView.DASHBOARD && (
@@ -158,12 +175,6 @@ export default function App() {
             onUpdateRecipe={handleUpdateRecipe}
             onDeleteRecipe={handleDeleteRecipe}
             onSelectRecipe={handleSelectRecipe}
-            onRestoreBackup={handleRestoreBackup}
-            darkMode={darkMode}
-            toggleDarkMode={() => setDarkMode(!darkMode)}
-            onDownloadBackup={handleDownloadBackup}
-            language={language}
-            setLanguage={setLanguage}
             t={t}
           />
         )}
