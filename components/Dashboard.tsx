@@ -78,28 +78,59 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [manualName, setManualName] = useState('');
   const [manualIngredients, setManualIngredients] = useState<Ingredient[]>([]);
+  
+  // Ingredient Input State
   const [tempIngName, setTempIngName] = useState('');
   const [tempIngQty, setTempIngQty] = useState('');
   const [tempIngUnit, setTempIngUnit] = useState('g');
+  const [editingIngIndex, setEditingIngIndex] = useState<number | null>(null);
   
   // Ref para hacer scroll arriba al editar
   const topRef = useRef<HTMLDivElement>(null);
 
-  const handleAddIngredient = () => {
+  const handleAddOrUpdateIngredient = () => {
     if (tempIngName && tempIngQty) {
-      setManualIngredients([
-        ...manualIngredients,
-        { name: tempIngName, quantity: parseFloat(tempIngQty), unit: tempIngUnit }
-      ]);
+      const newIng = { name: tempIngName, quantity: parseFloat(tempIngQty), unit: tempIngUnit };
+      
+      if (editingIngIndex !== null) {
+        // Update existing
+        const updatedList = [...manualIngredients];
+        updatedList[editingIngIndex] = newIng;
+        setManualIngredients(updatedList);
+        setEditingIngIndex(null);
+      } else {
+        // Add new
+        setManualIngredients([...manualIngredients, newIng]);
+      }
+      
+      // Reset inputs
       setTempIngName('');
       setTempIngQty('');
+      setTempIngUnit('g');
     }
   };
 
+  const handleEditIngredientClick = (index: number) => {
+    const ing = manualIngredients[index];
+    setTempIngName(ing.name);
+    setTempIngQty(ing.quantity.toString());
+    setTempIngUnit(ing.unit);
+    setEditingIngIndex(index);
+  };
+
   const removeIngredient = (index: number) => {
-    const newIngs = [...manualIngredients];
-    newIngs.splice(index, 1);
-    setManualIngredients(newIngs);
+    if (window.confirm("¿Estás seguro de que quieres eliminar este ingrediente?")) {
+      const newIngs = [...manualIngredients];
+      newIngs.splice(index, 1);
+      setManualIngredients(newIngs);
+      
+      // Si estábamos editando este, cancelar edición
+      if (editingIngIndex === index) {
+        setEditingIngIndex(null);
+        setTempIngName('');
+        setTempIngQty('');
+      }
+    }
   };
 
   const handleManualSave = () => {
@@ -122,6 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setManualName('');
       setManualIngredients([]);
       setEditingId(null);
+      setEditingIngIndex(null);
     }
   };
 
@@ -151,6 +183,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setManualName('');
     setManualIngredients([]);
     setEditingId(null);
+    setEditingIngIndex(null);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -377,7 +410,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
                           value={tempIngName}
                           onChange={(e) => setTempIngName(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient()}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddOrUpdateIngredient()}
                         />
                       </div>
                       <div className="flex-1">
@@ -387,7 +420,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
                           value={tempIngQty}
                           onChange={(e) => setTempIngQty(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient()}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddOrUpdateIngredient()}
                         />
                       </div>
                       <div className="w-16">
@@ -411,11 +444,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                     </div>
                     <button 
-                      onClick={handleAddIngredient}
+                      onClick={handleAddOrUpdateIngredient}
                       disabled={!tempIngName || !tempIngQty}
-                      className="w-full py-2 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-bold hover:bg-stone-300 dark:hover:bg-stone-600 disabled:opacity-50 transition"
+                      className={`w-full py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 ${editingIngIndex !== null ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-stone-600'}`}
                     >
-                      {t.add}
+                      {editingIngIndex !== null ? 'Actualizar' : t.add}
                     </button>
                   </div>
 
@@ -423,12 +456,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {manualIngredients.length > 0 && (
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {manualIngredients.map((ing, i) => (
-                        <div key={i} className="flex justify-between items-center text-sm p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-100 dark:border-rose-900/50">
+                        <div 
+                           key={i} 
+                           onClick={() => handleEditIngredientClick(i)}
+                           className={`flex justify-between items-center text-sm p-2 rounded-lg border cursor-pointer transition ${editingIngIndex === i ? 'bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700' : 'bg-rose-50 border-rose-100 dark:bg-rose-900/30 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50'}`}
+                        >
                            <div className="flex items-center gap-2">
                              <span className="font-bold text-rose-600 dark:text-rose-400">{ing.quantity}{ing.unit}</span>
                              <span className="text-stone-700 dark:text-stone-300 capitalize">{ing.name}</span>
+                             {editingIngIndex === i && <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded ml-2">Editando</span>}
                            </div>
-                           <button onClick={() => removeIngredient(i)} className="text-stone-400 hover:text-red-500 p-1">
+                           <button 
+                             onClick={(e) => { e.stopPropagation(); removeIngredient(i); }} 
+                             className="text-stone-400 hover:text-red-500 p-1"
+                           >
                              <Icons.Trash size={14} />
                            </button>
                         </div>

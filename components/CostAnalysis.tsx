@@ -64,26 +64,35 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     // 1. Actualizar precios globales
     onUpdatePantry(Object.values(pantryFormValues));
     
-    // 2. Actualizar la receta con Otros Gastos y el Costo Total
-    // Calculamos el costo total aquí para guardarlo en la receta
-    let calculatedTotal = parseFloat(otherExpenses) || 0;
+    // 2. IMPORTANTE: Calcular el costo total en este momento con los datos actuales del formulario
+    // No confiar en el estado anterior, usar pantryFormValues directamente
+    let calculatedTotal = 0;
+    
     recipe.ingredients.forEach(ing => {
         const key = ing.name.toLowerCase();
-        const pItem = pantryFormValues[key]; // Usar valores del form actual
+        const pItem = pantryFormValues[key]; // Usar el item del formulario actual
         if (pItem && pItem.price > 0) {
-            calculatedTotal += calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
+            const cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
+            calculatedTotal += cost;
         }
     });
 
+    // Sumar otros gastos
+    const extras = parseFloat(otherExpenses) || 0;
+    calculatedTotal += extras;
+
+    // 3. Crear el objeto receta actualizado
     const updatedRecipe = { 
       ...recipe, 
-      otherExpenses: parseFloat(otherExpenses) || 0,
-      totalCost: calculatedTotal,
-      hasPricesConfigured: true // IMPORTANTE: Marcamos que ya se configuró
+      otherExpenses: extras,
+      totalCost: calculatedTotal, // Guardamos el costo calculado inmediatamente
+      hasPricesConfigured: true
     };
+    
+    // 4. Actualizar en la App
     onUpdateRecipe(updatedRecipe);
 
-    // 3. Cerrar formulario y mostrar Resumen
+    // 5. Cerrar formulario para ver el Resumen (que ahora tendrá el costo > 0)
     setShowPantryForm(false);
   };
 
@@ -104,11 +113,9 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   };
 
   const handleDownloadPDF = () => {
-    // Cambiar título temporalmente para que el nombre del archivo PDF sea correcto
     const originalTitle = document.title;
     document.title = `Finanzas_${recipe.name.replace(/\s+/g, '_')}`;
     window.print();
-    // Restaurar título
     document.title = originalTitle;
   };
 
@@ -227,8 +234,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           </div>
         </div>
 
-        {/* Botón Guardar - Z-index alto y Fixed bottom */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-[60]">
+        {/* Botón Guardar - Fixed y Z-Index Alto */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-[60] shadow-2xl">
           <button 
             onClick={handlePantrySubmit}
             className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
