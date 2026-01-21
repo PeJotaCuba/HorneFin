@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Icons } from './Icons';
 import { Logo } from './Logo';
 import { Language } from '../utils/translations';
@@ -24,9 +24,14 @@ export const Header: React.FC<HeaderProps> = ({
   isCompact = false,
   t
 }) => {
-  const [showLangMenu, setShowLangMenu] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
   const availableLanguages: Language[] = ['ES', 'EN', 'PT'];
+
+  const toggleLanguage = () => {
+    const currentIndex = availableLanguages.indexOf(language);
+    const nextIndex = (currentIndex + 1) % availableLanguages.length;
+    setLanguage(availableLanguages[nextIndex]);
+  };
 
   const handleBackupUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -57,29 +62,14 @@ export const Header: React.FC<HeaderProps> = ({
           />
         </div>
         <div className="flex gap-2 items-center">
-          <div className="relative">
-            <button 
-              onClick={() => setShowLangMenu(!showLangMenu)}
-              className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center font-bold text-xs ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
-            >
-               {language}
-            </button>
-            {showLangMenu && (
-              <div className="absolute top-10 right-0 bg-white dark:bg-stone-800 shadow-xl rounded-xl border border-stone-100 dark:border-stone-700 overflow-hidden w-24 z-50">
-                 {availableLanguages.map(lang => (
-                   <button
-                     key={lang}
-                     onClick={() => { setLanguage(lang); setShowLangMenu(false); }}
-                     className={`w-full text-left px-4 py-2 text-sm font-bold transition ${language === lang ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-                   >
-                     {lang === 'ES' && 'Español'}
-                     {lang === 'EN' && 'English'}
-                     {lang === 'PT' && 'Português'}
-                   </button>
-                 ))}
-              </div>
-            )}
-          </div>
+          
+          <button 
+            onClick={toggleLanguage}
+            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center font-bold text-xs ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
+            title={t.language}
+          >
+             {language}
+          </button>
 
           <button 
             onClick={toggleDarkMode}
