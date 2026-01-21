@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Icons } from './Icons';
 import { Recipe, Ingredient } from '../types';
-import { parseRecipeFromText, parseRecipeFromImage } from '../services/geminiService';
 import { Language } from '../utils/translations';
 
 interface DashboardProps {
@@ -27,8 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setLanguage,
   t
 }) => {
-  const [inputMode, setInputMode] = useState<'MANUAL' | 'PHOTO' | 'FILE'>('MANUAL');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [inputMode, setInputMode] = useState<'MANUAL' | 'FILE'>('MANUAL');
   const [showLangMenu, setShowLangMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -50,6 +48,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const removeIngredient = (index: number) => {
+    const newIngs = [...manualIngredients];
+    newIngs.splice(index, 1);
+    setManualIngredients(newIngs);
+  };
+
   const handleManualSave = () => {
     if (manualName && manualIngredients.length > 0) {
       const newRecipe: Recipe = {
@@ -62,42 +66,52 @@ export const Dashboard: React.FC<DashboardProps> = ({
       onAddRecipe(newRecipe);
       setManualName('');
       setManualIngredients([]);
+      // Stay in manual mode to see result or add another
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsProcessing(true);
-    try {
-      let result;
-      if (inputMode === 'FILE') {
-        const text = await file.text();
-        result = await parseRecipeFromText(text);
-      } else {
-        // Photo
-        const base64 = await new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve((reader.result as string).split(',')[1]);
-          reader.readAsDataURL(file);
-        });
-        result = await parseRecipeFromImage(base64);
-      }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      parseTxtToRecipe(text, file.name.replace('.txt', ''));
+    };
+    reader.readAsText(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
-      const newRecipe: Recipe = {
-        id: Date.now().toString(),
-        name: result.name,
-        ingredients: result.ingredients,
-        imageUrl: `https://picsum.photos/seed/${result.name}/400/300`,
-        createdAt: Date.now()
-      };
-      onAddRecipe(newRecipe);
-    } catch (error) {
-      alert("Error: " + error);
-    } finally {
-      setIsProcessing(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
+  // Local Regex Parser (No AI)
+  const parseTxtToRecipe = (text: string, fileName: string) => {
+    const lines = text.split(/\r?\n/);
+    const ingredients: Ingredient[] = [];
+    
+    // Format expected: "500 g Flour" or "2 Eggs"
+    // Regex: Number + spaces + Unit (letters) + spaces + Rest of text
+    const regex = /^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]*)\s+(.*)/;
+
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+
+      const match = trimmed.match(regex);
+      if (match) {
+        ingredients.push({
+          quantity: parseFloat(match[1].replace(',', '.')),
+          unit: match[2].toLowerCase() || 'u',
+          name: match[3].trim()
+        });
+      }
+    });
+
+    if (ingredients.length > 0) {
+      setManualName(fileName);
+      setManualIngredients(ingredients);
+      setInputMode('MANUAL'); // Switch to manual to review
+    } else {
+      alert("No se pudieron detectar ingredientes. Usa el formato: '500 g Harina' por línea.");
     }
   };
 
@@ -128,11 +142,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
               {showLangMenu && (
                 <div className="absolute top-10 right-0 bg-white dark:bg-stone-800 shadow-xl rounded-xl border border-stone-100 dark:border-stone-700 overflow-hidden w-24 z-50">
-                   {availableLanguages.filter(l => l !== language).map(lang => (
+                   {availableLanguages.map(lang => (
                      <button
                        key={lang}
                        onClick={() => { setLanguage(lang); setShowLangMenu(false); }}
-                       className="w-full text-left px-4 py-2 text-sm font-bold text-stone-600 dark:text-stone-300 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 transition"
+                       className={`w-full text-left px-4 py-2 text-sm font-bold transition ${language === lang ? 'text-rose-500 bg-rose-50 dark:bg-rose-900/20' : 'text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                      >
                        {lang === 'ES' && 'Español'}
                        {lang === 'EN' && 'English'}
@@ -173,12 +187,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Icons.Edit size={14} /> {t.manual}
             </button>
             <button 
-              onClick={() => setInputMode('PHOTO')}
-              className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'PHOTO' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
-            >
-              <Icons.Camera size={14} /> {t.photo}
-            </button>
-            <button 
               onClick={() => setInputMode('FILE')}
               className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'FILE' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
@@ -187,41 +195,44 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
 
           <div className="p-5">
-            {isProcessing ? (
-               <div className="text-center py-8">
-                 <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                 <p className="text-stone-500 dark:text-stone-400 font-medium">{t.analyzing}</p>
-               </div>
-            ) : (
-              <>
-                {inputMode === 'MANUAL' && (
-                  <div className="space-y-4">
+              {inputMode === 'MANUAL' ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-stone-400 uppercase mb-1 block">{t.recipeName}</label>
                     <input 
                       type="text" 
-                      placeholder={t.recipeName}
+                      placeholder="Ej. Pastel de Vainilla"
                       className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 font-bold text-stone-800 dark:text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-stone-400"
                       value={manualName}
                       onChange={(e) => setManualName(e.target.value)}
                     />
-                    
-                    <div className="bg-stone-50 dark:bg-stone-800/50 p-3 rounded-xl border border-stone-200 dark:border-stone-700 space-y-3">
-                      <div className="flex gap-2">
+                  </div>
+                  
+                  <div className="bg-stone-50 dark:bg-stone-800/50 p-3 rounded-xl border border-stone-200 dark:border-stone-700 space-y-3">
+                    <div className="flex gap-2">
+                      <div className="flex-[2]">
                         <input 
                           type="text" 
                           placeholder={t.ingredient}
-                          className="flex-[2] p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
                           value={tempIngName}
                           onChange={(e) => setTempIngName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient()}
                         />
+                      </div>
+                      <div className="flex-1">
                         <input 
                           type="number" 
                           placeholder={t.qty}
-                          className="flex-1 p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
                           value={tempIngQty}
                           onChange={(e) => setTempIngQty(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleAddIngredient()}
                         />
+                      </div>
+                      <div className="w-16">
                         <select 
-                          className="w-16 p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white focus:outline-none focus:border-rose-500"
                           value={tempIngUnit}
                           onChange={(e) => setTempIngUnit(e.target.value)}
                         >
@@ -234,57 +245,65 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <option value="u">u</option>
                         </select>
                       </div>
-                      <button 
-                        onClick={handleAddIngredient}
-                        disabled={!tempIngName || !tempIngQty}
-                        className="w-full py-2 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-bold hover:bg-stone-300 dark:hover:bg-stone-600 disabled:opacity-50 transition"
-                      >
-                        {t.add}
-                      </button>
                     </div>
-
-                    {/* Ingredient List Preview */}
-                    {manualIngredients.length > 0 && (
-                      <div className="space-y-2">
-                        {manualIngredients.map((ing, i) => (
-                          <div key={i} className="flex justify-between items-center text-sm p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg text-rose-800 dark:text-rose-300">
-                             <span>{ing.name}</span>
-                             <span className="font-bold">{ing.quantity}{ing.unit}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
                     <button 
-                      onClick={handleManualSave}
-                      disabled={!manualName || manualIngredients.length === 0}
-                      className="w-full py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-200 dark:shadow-none hover:bg-rose-600 disabled:opacity-50 transition-all"
+                      onClick={handleAddIngredient}
+                      disabled={!tempIngName || !tempIngQty}
+                      className="w-full py-2 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-bold hover:bg-stone-300 dark:hover:bg-stone-600 disabled:opacity-50 transition"
                     >
-                      {t.saveRecipe}
+                      {t.add}
                     </button>
                   </div>
-                )}
 
-                {(inputMode === 'PHOTO' || inputMode === 'FILE') && (
-                  <div className="text-center py-8 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition cursor-pointer relative group">
-                    <input 
-                      ref={fileInputRef}
-                      type="file" 
-                      accept={inputMode === 'PHOTO' ? "image/*" : ".txt"}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                      onChange={handleFileUpload}
-                    />
-                    <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-500 group-hover:scale-110 transition-transform">
-                      {inputMode === 'PHOTO' ? <Icons.Camera size={32} /> : <Icons.Upload size={32} />}
+                  {/* Ingredient List Preview */}
+                  {manualIngredients.length > 0 && (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {manualIngredients.map((ing, i) => (
+                        <div key={i} className="flex justify-between items-center text-sm p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-100 dark:border-rose-900/50">
+                           <div className="flex items-center gap-2">
+                             <span className="font-bold text-rose-600 dark:text-rose-400">{ing.quantity}{ing.unit}</span>
+                             <span className="text-stone-700 dark:text-stone-300">{ing.name}</span>
+                           </div>
+                           <button onClick={() => removeIngredient(i)} className="text-stone-400 hover:text-red-500 p-1">
+                             <Icons.Trash size={14} />
+                           </button>
+                        </div>
+                      ))}
                     </div>
-                    <p className="font-bold text-stone-700 dark:text-stone-300">
-                      {inputMode === 'PHOTO' ? t.takePhoto : t.uploadFile}
-                    </p>
-                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">{t.aiIdentify}</p>
+                  )}
+
+                  <button 
+                    onClick={handleManualSave}
+                    disabled={!manualName || manualIngredients.length === 0}
+                    className="w-full py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-200 dark:shadow-none hover:bg-rose-600 disabled:opacity-50 transition-all"
+                  >
+                    {t.saveRecipe}
+                  </button>
+                </div>
+              ) : (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-center py-12 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition cursor-pointer relative group"
+                >
+                  <input 
+                    ref={fileInputRef}
+                    type="file" 
+                    accept=".txt"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                  <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-500 group-hover:scale-110 transition-transform">
+                    <Icons.Upload size={32} />
                   </div>
-                )}
-              </>
-            )}
+                  <p className="font-bold text-stone-700 dark:text-stone-300">
+                    {t.uploadFile}
+                  </p>
+                  <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 max-w-[200px] mx-auto">
+                    Formato: Cantidad Unidad Nombre<br/>
+                    (Ej: 500 g Harina)
+                  </p>
+                </div>
+              )}
           </div>
         </div>
 
