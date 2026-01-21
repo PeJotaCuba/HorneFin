@@ -11,7 +11,7 @@ export const TRANSLATIONS = {
     qty: "Cant.",
     add: "+ Agregar",
     saveRecipe: "Guardar Receta",
-    uploadFile: "Cargar Archivo TXT",
+    uploadFile: "Subir Archivo TXT",
     savedRecipes: "Recetas Guardadas",
     ingredientsCount: "Ingredientes",
     analyzeCosts: "Analizar Costos",

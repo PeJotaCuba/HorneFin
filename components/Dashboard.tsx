@@ -83,35 +83,80 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Local Regex Parser (No AI)
+  // Improved Local Regex Parser
   const parseTxtToRecipe = (text: string, fileName: string) => {
     const lines = text.split(/\r?\n/);
     const ingredients: Ingredient[] = [];
+    let detectedName = fileName;
+    let nameFoundInText = false;
+
+    // Helper to normalize units from text (e.g., "gramos" -> "g")
+    const normalizeTxtUnit = (u: string) => {
+      u = u.toLowerCase().trim();
+      if (u.startsWith('gram')) return 'g';
+      if (u.startsWith('mililitr')) return 'ml';
+      if (u.startsWith('litr')) return 'l';
+      if (u.startsWith('unidad')) return 'u';
+      if (u.startsWith('cucharada')) return 'cda'; // Spoon
+      if (u.startsWith('cucharita')) return 'cdita'; // Teaspoon
+      if (u.startsWith('taza')) return 'taza'; // Cup
+      if (u.startsWith('onz')) return 'oz';
+      if (u.startsWith('libr')) return 'lb';
+      if (!u) return 'u';
+      return u; // Return as is if short (e.g. 'g', 'ml')
+    };
     
-    // Format expected: "500 g Flour" or "2 Eggs"
-    // Regex: Number + spaces + Unit (letters) + spaces + Rest of text
-    const regex = /^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]*)\s+(.*)/;
+    // Regex Strategy 1: "Name: Quantity Unit" (e.g., "- Azúcar: 200 gramos")
+    // Matches: Optional dash, Name (before colon), Colon, Number, Word (Unit)
+    const regexColonFormat = /^\s*-?\s*([^:]+):\s*(\d+(?:[.,]\d+)?)\s*([a-zA-ZáéíóúñÁÉÍÓÚÑ]+)/i;
 
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      if (!trimmed) return;
+    // Regex Strategy 2: "Quantity Unit Name" (e.g., "500 g Harina")
+    // Matches: Number, Word (Unit), Rest (Name)
+    const regexStandardFormat = /^(\d+(?:[.,]\d+)?)\s*([a-zA-Z]*)\s+(.*)/i;
 
-      const match = trimmed.match(regex);
-      if (match) {
+    lines.forEach((line, index) => {
+      const cleanLine = line.trim();
+      if (!cleanLine) return;
+      
+      // Skip headers
+      if (cleanLine.toLowerCase().includes('ingredientes:')) return;
+
+      // Try Strategy 1 (Colon format)
+      const matchA = cleanLine.match(regexColonFormat);
+      if (matchA) {
         ingredients.push({
-          quantity: parseFloat(match[1].replace(',', '.')),
-          unit: match[2].toLowerCase() || 'u',
-          name: match[3].trim()
+          name: matchA[1].trim(), // Name is first
+          quantity: parseFloat(matchA[2].replace(',', '.')),
+          unit: normalizeTxtUnit(matchA[3])
         });
+        return;
+      }
+
+      // Try Strategy 2 (Standard format)
+      const matchB = cleanLine.match(regexStandardFormat);
+      if (matchB) {
+        ingredients.push({
+          quantity: parseFloat(matchB[1].replace(',', '.')),
+          unit: normalizeTxtUnit(matchB[2]),
+          name: matchB[3].trim()
+        });
+        return;
+      }
+
+      // If line didn't match an ingredient, and it's the very first line, assume it's the Title
+      if (!nameFoundInText && index === 0 && cleanLine.length > 2) {
+         detectedName = cleanLine;
+         nameFoundInText = true;
       }
     });
 
     if (ingredients.length > 0) {
-      setManualName(fileName);
+      setManualName(detectedName);
       setManualIngredients(ingredients);
       setInputMode('MANUAL'); // Switch to manual to review
+      // Optional: alert(`Importado: ${detectedName} con ${ingredients.length} ingredientes.`);
     } else {
-      alert("No se pudieron detectar ingredientes. Usa el formato: '500 g Harina' por línea.");
+      alert("No se pudieron detectar ingredientes. Formatos soportados:\n1. '- Ingrediente: 200 g'\n2. '200 g Ingrediente'");
     }
   };
 
@@ -243,6 +288,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <option value="lb">lb</option>
                           <option value="oz">oz</option>
                           <option value="u">u</option>
+                          <option value="cda">cda</option>
+                          <option value="cdita">cdita</option>
+                          <option value="taza">taza</option>
                         </select>
                       </div>
                     </div>
@@ -262,7 +310,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <div key={i} className="flex justify-between items-center text-sm p-2 bg-rose-50 dark:bg-rose-900/30 rounded-lg border border-rose-100 dark:border-rose-900/50">
                            <div className="flex items-center gap-2">
                              <span className="font-bold text-rose-600 dark:text-rose-400">{ing.quantity}{ing.unit}</span>
-                             <span className="text-stone-700 dark:text-stone-300">{ing.name}</span>
+                             <span className="text-stone-700 dark:text-stone-300 capitalize">{ing.name}</span>
                            </div>
                            <button onClick={() => removeIngredient(i)} className="text-stone-400 hover:text-red-500 p-1">
                              <Icons.Trash size={14} />
@@ -298,9 +346,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <p className="font-bold text-stone-700 dark:text-stone-300">
                     {t.uploadFile}
                   </p>
-                  <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 max-w-[200px] mx-auto">
-                    Formato: Cantidad Unidad Nombre<br/>
-                    (Ej: 500 g Harina)
+                  <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 max-w-[200px] mx-auto leading-relaxed">
+                    Soporta formatos flexibles:<br/>
+                    <span className="font-mono text-[10px] bg-stone-100 dark:bg-stone-800 px-1 rounded">- Ingrediente: 200 g</span><br/>
+                    <span className="font-mono text-[10px] bg-stone-100 dark:bg-stone-800 px-1 rounded">200 g Ingrediente</span>
                   </p>
                 </div>
               )}
