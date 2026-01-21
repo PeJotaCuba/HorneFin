@@ -16,6 +16,33 @@ export default function App() {
   
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
 
+  // Cargar datos del LocalStorage al iniciar
+  useEffect(() => {
+    const savedData = localStorage.getItem('hornefin_data');
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.recipes) setRecipes(parsed.recipes);
+        if (parsed.pantry) setPantry(parsed.pantry);
+        if (parsed.darkMode !== undefined) setDarkMode(parsed.darkMode);
+        if (parsed.language) setLanguage(parsed.language);
+      } catch (e) {
+        console.error("Error loading local data", e);
+      }
+    }
+  }, []);
+
+  // Guardar datos en LocalStorage cada vez que cambien
+  useEffect(() => {
+    const data = {
+      recipes,
+      pantry,
+      darkMode,
+      language
+    };
+    localStorage.setItem('hornefin_data', JSON.stringify(data));
+  }, [recipes, pantry, darkMode, language]);
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -69,7 +96,7 @@ export default function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `HorneFin_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `HorneFin_DB_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

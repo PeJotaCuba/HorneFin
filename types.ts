@@ -24,6 +24,7 @@ export interface Recipe {
   // Financial fields
   laborCost?: number;
   overheadPercentage?: number;
+  otherExpenses?: number; // New field for specific extra costs
   totalCost?: number;
   suggestedPrice?: number;
   profitMargin?: number;
@@ -38,7 +39,7 @@ export interface FinancialStats {
 
 export enum AppView {
   DASHBOARD = 'DASHBOARD',     // Inicio
-  PANTRY = 'PANTRY',           // Costos (Precios de Ingredientes)
-  SUMMARY = 'SUMMARY',         // Resumen (Estadísticas)
+  PANTRY = 'PANTRY',           // Costos Globales
+  SUMMARY = 'SUMMARY',         // Finanzas Globales
   COST_ANALYSIS = 'COST_ANALYSIS' // Detalle de Receta
 }

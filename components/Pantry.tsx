@@ -39,7 +39,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
 
   const handleSaveAll = () => {
     onUpdatePantry(items);
-    alert('Precios actualizados');
+    alert('Precios globales actualizados');
   };
 
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));

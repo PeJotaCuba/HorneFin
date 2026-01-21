@@ -13,7 +13,9 @@ interface CostAnalysisProps {
 }
 
 export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUpdatePantry, onUpdateRecipe, onBack, t }) => {
-  const [showPantryForm, setShowPantryForm] = useState(false);
+  // Iniciar siempre en modo edición (showPantryForm = true)
+  const [showPantryForm, setShowPantryForm] = useState(true);
+  
   const [mode, setMode] = useState<'SINGLE' | 'BATCH'>('SINGLE');
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(recipe.name);
@@ -23,30 +25,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
   const [batchesPerDay, setBatchesPerDay] = useState(1);
   const [desiredMargin, setDesiredMargin] = useState(45); // %
   
-  // Staging for Pantry Form
+  // Staging for Pantry Form & Other Expenses
   const [pantryFormValues, setPantryFormValues] = useState<Record<string, PantryItem>>({});
+  const [otherExpenses, setOtherExpenses] = useState<string>(recipe.otherExpenses?.toString() || '');
 
-  // Check if we need to show the form on load (if missing prices)
+  // Cargar datos al formulario al montar el componente
   useEffect(() => {
-    const missingPrices = recipe.ingredients.some(ing => !pantry[ing.name.toLowerCase()]);
-    if (missingPrices) {
-      const initialForm: Record<string, PantryItem> = {};
-      recipe.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase();
-        initialForm[key] = pantry[key] || {
-          name: ing.name,
-          price: 0,
-          quantity: 1,
-          unit: 'kg'
-        };
-      });
-      setPantryFormValues(initialForm);
-      setShowPantryForm(true);
-    }
-  }, [recipe, pantry]);
-
-  // If user opens manual edit, ensure all ingredients are in the form even if they have prices
-  const openPriceEditor = () => {
     const initialForm: Record<string, PantryItem> = {};
     recipe.ingredients.forEach(ing => {
       const key = ing.name.toLowerCase();
@@ -58,11 +42,22 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
       };
     });
     setPantryFormValues(initialForm);
-    setShowPantryForm(true);
-  };
+    setOtherExpenses(recipe.otherExpenses?.toString() || '');
+    setShowPantryForm(true); // Forzar apertura al entrar
+  }, [recipe, pantry]);
 
   const handlePantrySubmit = () => {
+    // 1. Actualizar precios globales
     onUpdatePantry(Object.values(pantryFormValues));
+    
+    // 2. Actualizar la receta con Otros Gastos
+    const updatedRecipe = { 
+      ...recipe, 
+      otherExpenses: parseFloat(otherExpenses) || 0 
+    };
+    onUpdateRecipe(updatedRecipe);
+
+    // 3. Cerrar formulario y mostrar Resumen
     setShowPantryForm(false);
   };
 
@@ -77,13 +72,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
      if (editedName.trim()) {
         onUpdateRecipe({ ...recipe, name: editedName });
      } else {
-        setEditedName(recipe.name); // Revert if empty
+        setEditedName(recipe.name);
      }
      setIsEditingName(false);
   };
 
   const calculations = useMemo(() => {
-    let totalRecipeCost = 0;
+    let totalMaterialsCost = 0;
     const ingredientBreakdown = recipe.ingredients.map(ing => {
       const key = ing.name.toLowerCase();
       const pantryItem = pantry[key];
@@ -91,9 +86,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
       if (pantryItem && pantryItem.price > 0) {
         cost = calculateIngredientCost(ing.quantity, ing.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
       }
-      totalRecipeCost += cost;
+      totalMaterialsCost += cost;
       return { ...ing, cost };
     });
+
+    // Add other expenses to the total recipe cost
+    const extras = recipe.otherExpenses || 0;
+    const totalRecipeCost = totalMaterialsCost + extras;
 
     const costPerItem = mode === 'SINGLE' ? totalRecipeCost : (totalRecipeCost / batchSize);
     const suggestedPrice = costPerItem / (1 - (desiredMargin / 100));
@@ -104,18 +103,20 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
     const dailyProfit = totalDailyRevenue - totalDailyCost;
 
     return {
+      totalMaterialsCost,
       totalRecipeCost,
       ingredientBreakdown,
       costPerItem,
       suggestedPrice,
-      dailyProfit
+      dailyProfit,
+      extras
     };
   }, [recipe, pantry, mode, batchSize, batchesPerDay, desiredMargin]);
 
   if (showPantryForm) {
     return (
       <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-20">
-        <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
+        <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm z-10">
           <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
              <Icons.Close />
@@ -169,13 +170,33 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
               </div>
             </div>
           ))}
+
+          {/* Other Expenses Field */}
+          <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6">
+             <div className="flex items-center gap-2 mb-3">
+               <Icons.Settings className="text-rose-500" size={20} />
+               <p className="font-bold text-lg text-rose-800 dark:text-rose-200">{t.otherExpenses}</p>
+             </div>
+             <p className="text-xs text-rose-600 dark:text-rose-300 mb-2">{t.otherExpensesHint}</p>
+             <div className="relative">
+                <span className="absolute left-3 top-2.5 text-rose-400 font-bold">$</span>
+                <input 
+                  type="number" 
+                  className="w-full pl-6 p-3 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-900/50 rounded-lg font-bold text-lg dark:text-white focus:border-rose-500 focus:outline-none"
+                  value={otherExpenses}
+                  onChange={(e) => setOtherExpenses(e.target.value)}
+                  placeholder="0.00"
+                />
+             </div>
+          </div>
         </div>
+
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-50">
           <button 
             onClick={handlePantrySubmit}
-            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition"
+            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
           >
-            {t.savePrices}
+            <Icons.Save size={20} /> {t.savePrices}
           </button>
         </div>
       </div>
@@ -323,6 +344,18 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                    </div>
                 </div>
               ))}
+              
+              {/* Other Expenses Item in Breakdown */}
+              {calculations.extras > 0 && (
+                 <div className="p-4 flex justify-between items-center bg-rose-50 dark:bg-rose-900/10">
+                    <div>
+                       <p className="font-bold text-rose-800 dark:text-rose-300">Otros Gastos</p>
+                       <p className="text-xs text-rose-500 dark:text-rose-400">Fijo</p>
+                    </div>
+                    <p className="font-bold text-rose-900 dark:text-rose-200">€{calculations.extras.toFixed(2)}</p>
+                 </div>
+              )}
+
               <div className="p-4 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center font-bold text-stone-800 dark:text-white">
                  <span>{t.totalMaterials}</span>
                  <span>€{calculations.totalRecipeCost.toFixed(2)}</span>
@@ -330,9 +363,9 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
            </div>
         </div>
         
-        {/* Edit Prices Button */}
+        {/* Re-Open Edit Prices Button */}
         <button 
-           onClick={openPriceEditor}
+           onClick={() => setShowPantryForm(true)}
            className="w-full py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white border-2 border-stone-100 dark:border-stone-700 rounded-2xl font-bold shadow-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center justify-center gap-2"
         >
            <Icons.Money size={20} className="text-amber-500" />

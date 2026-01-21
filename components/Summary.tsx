@@ -33,6 +33,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
        ingredientCosts[key] = (ingredientCosts[key] || 0) + cost;
     });
 
+    // Add Other Expenses for this recipe to total costs
+    const otherExpenses = recipe.otherExpenses || 0;
+    recipeCost += otherExpenses;
+
     // Default profit margin assumption if not set is 45% (from CostAnalysis default)
     const margin = recipe.profitMargin || 45;
     const price = recipe.suggestedPrice || (recipeCost > 0 ? recipeCost / (1 - (margin / 100)) : 0);
