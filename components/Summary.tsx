@@ -17,12 +17,9 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   let totalProfit = 0;
   const ingredientCosts: Record<string, number> = {};
 
-  // Mocking "usage" or sales assumption: 1 batch of each recipe sold
   recipes.forEach(recipe => {
     let recipeCost = 0;
     recipe.ingredients.forEach(ing => {
-       // CORRECCIÓN: Usar normalizeKey para buscar en la despensa global
-       // Esto asegura que "harina" en receta coincida con "Harina" en despensa
        const key = normalizeKey(ing.name);
        const pItem = pantry[key];
        
@@ -32,15 +29,12 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
        }
        recipeCost += cost;
        
-       // Aggregate for Pie Chart
        ingredientCosts[key] = (ingredientCosts[key] || 0) + cost;
     });
 
-    // Add Other Expenses for this recipe to total costs
     const otherExpenses = recipe.otherExpenses || 0;
     recipeCost += otherExpenses;
 
-    // Default profit margin assumption if not set is 45% (from CostAnalysis default)
     const margin = recipe.profitMargin || 45;
     const price = recipe.suggestedPrice || (recipeCost > 0 ? recipeCost / (1 - (margin / 100)) : 0);
     
@@ -52,10 +46,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   const pieData = Object.entries(ingredientCosts)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value)
-    .slice(0, 6); // Top 6 ingredients
+    .slice(0, 6); 
 
-  // Vibrant colors for the pie chart as requested
-  const COLORS = ['#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#64748B'];
+  // Palette basada en el logo: Rojo, Naranja, Ámbar, Amarillo, Gris
+  const COLORS = ['#DC2626', '#EA580C', '#D97706', '#CA8A04', '#65A30D', '#57534E'];
 
   const handleExportReport = () => {
     const date = new Date().toLocaleDateString();
@@ -67,10 +61,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
         <title>Reporte Financiero Global</title>
         <style>
           body { font-family: 'Arial', sans-serif; padding: 20px; }
-          h1 { color: #8B5CF6; }
+          h1 { color: #5D2E1F; }
           .stat-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; background: #f9f9f9; }
           .stat-val { font-size: 18px; font-weight: bold; }
-          .profit { color: #E11D48; font-size: 24px; }
+          .profit { color: #DC2626; font-size: 24px; }
           .green { color: #10B981; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
@@ -128,7 +122,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
         <div className="flex justify-between items-center">
             <div>
                 <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-                <span className="bg-purple-500 text-white p-1.5 rounded-lg">
+                <span className="bg-red-600 text-white p-1.5 rounded-lg">
                     <Icons.PieChart size={20} />
                 </span>
                 {t.summaryTitle}
@@ -157,13 +151,13 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
               <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.estRevenue}</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-500 print:text-black">${totalRevenue.toFixed(2)}</p>
            </div>
-           <div className="col-span-2 bg-rose-500 p-5 rounded-2xl text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 print:bg-white print:text-black print:border print:border-black print:shadow-none">
+           <div className="col-span-2 bg-red-600 p-5 rounded-2xl text-white shadow-lg shadow-red-200 dark:shadow-red-900/20 print:bg-white print:text-black print:border print:border-black print:shadow-none">
               <div className="flex justify-between items-center mb-2">
-                 <p className="text-rose-100 font-bold text-sm uppercase print:text-black">{t.netProfit}</p>
-                 <Icons.Up size={20} className="text-rose-200 no-print" />
+                 <p className="text-red-100 font-bold text-sm uppercase print:text-black">{t.netProfit}</p>
+                 <Icons.Up size={20} className="text-red-200 no-print" />
               </div>
               <p className="text-3xl font-bold print:text-black">${totalProfit.toFixed(2)}</p>
-              <p className="text-xs text-rose-100 mt-1 opacity-80 print:text-gray-600">{t.profitHint}</p>
+              <p className="text-xs text-red-100 mt-1 opacity-80 print:text-gray-600">{t.profitHint}</p>
            </div>
         </div>
 

@@ -18,21 +18,11 @@ interface DashboardProps {
   t: any;
 }
 
-// Helper para generar imagen SVG temática y vectorizada
+// Helper para generar imagen SVG temática
 const generateRecipeImage = (name: string) => {
-  const colors = [
-    '#FECACA', // red-200
-    '#FED7AA', // orange-200
-    '#FDE68A', // amber-200
-    '#A7F3D0', // emerald-200
-    '#BFDBFE', // blue-200
-    '#DDD6FE', // violet-200
-    '#FBCFE8', // pink-200
-  ];
-  
+  const colors = ['#FECACA', '#FED7AA', '#FDE68A', '#A7F3D0', '#BFDBFE', '#DDD6FE', '#FBCFE8'];
   const emojis = ['🎂', '🧁', '🍰', '🍪', '🍩', '🥯', '🍞', '🥐', '🥨', '🥞'];
   
-  // Deterministic selection based on name
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -40,11 +30,9 @@ const generateRecipeImage = (name: string) => {
   
   const colorIndex = Math.abs(hash) % colors.length;
   const emojiIndex = Math.abs(hash) % emojis.length;
-  
   const bgColor = colors[colorIndex];
   const emoji = emojis[emojiIndex];
 
-  // Create SVG Data URI
   const svgString = `
     <svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100">
       <rect width="100%" height="100%" fill="${bgColor}" />
@@ -85,25 +73,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [tempIngUnit, setTempIngUnit] = useState('g');
   const [editingIngIndex, setEditingIngIndex] = useState<number | null>(null);
   
-  // Ref para hacer scroll arriba al editar
   const topRef = useRef<HTMLDivElement>(null);
 
   const handleAddOrUpdateIngredient = () => {
     if (tempIngName && tempIngQty) {
       const newIng = { name: tempIngName, quantity: parseFloat(tempIngQty), unit: tempIngUnit };
-      
       if (editingIngIndex !== null) {
-        // Update existing
         const updatedList = [...manualIngredients];
         updatedList[editingIngIndex] = newIng;
         setManualIngredients(updatedList);
         setEditingIngIndex(null);
       } else {
-        // Add new
         setManualIngredients([...manualIngredients, newIng]);
       }
-      
-      // Reset inputs
       setTempIngName('');
       setTempIngQty('');
       setTempIngUnit('g');
@@ -123,8 +105,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
       const newIngs = [...manualIngredients];
       newIngs.splice(index, 1);
       setManualIngredients(newIngs);
-      
-      // Si estábamos editando este, cancelar edición
       if (editingIngIndex === index) {
         setEditingIngIndex(null);
         setTempIngName('');
@@ -149,7 +129,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
         onAddRecipe(newRecipe);
       }
 
-      // Reset form
       setManualName('');
       setManualIngredients([]);
       setEditingId(null);
@@ -158,12 +137,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const handleStartEdit = (e: React.MouseEvent, recipe: Recipe) => {
-    e.stopPropagation(); // Prevent opening detail view
+    e.stopPropagation(); 
     setManualName(recipe.name);
     setManualIngredients([...recipe.ingredients]);
     setEditingId(recipe.id);
     setInputMode('MANUAL');
-    // Scroll to top to show form
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -217,7 +195,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (backupInputRef.current) backupInputRef.current.value = '';
   };
 
-  // Improved Local Regex Parser
   const parseTxtToRecipe = (text: string, fileName: string) => {
     const lines = text.split(/\r?\n/);
     const ingredients: Ingredient[] = [];
@@ -276,7 +253,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     if (ingredients.length > 0) {
       setManualName(detectedName);
       setManualIngredients(ingredients);
-      setEditingId(null); // New import = new recipe
+      setEditingId(null); 
       setInputMode('MANUAL'); 
     } else {
       alert("No se pudieron detectar ingredientes.");
@@ -287,17 +264,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300" ref={topRef}>
-      {/* Header */}
+      {/* Header con Logo */}
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2 tracking-tight">
-              <span className="bg-rose-500 text-white p-1.5 rounded-lg">
-                <Icons.Chef size={20} />
-              </span>
-              {t.appTitle}
-            </h1>
-            <p className="text-stone-500 dark:text-stone-400 text-xs font-medium ml-9">{t.appSubtitle}</p>
+            {/* Reemplazo de texto por Imagen de Logo */}
+            <img src="/logo.png" alt="HorneFin" className="h-14 w-auto object-contain" />
           </div>
           <div className="flex gap-2">
             <div className="relative">
@@ -313,7 +285,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                      <button
                        key={lang}
                        onClick={() => { setLanguage(lang); setShowLangMenu(false); }}
-                       className={`w-full text-left px-4 py-2 text-sm font-bold transition ${language === lang ? 'text-rose-500 bg-rose-50 dark:bg-rose-900/20' : 'text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                       className={`w-full text-left px-4 py-2 text-sm font-bold transition ${language === lang ? 'text-amber-600 bg-amber-50 dark:bg-amber-900/20' : 'text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
                      >
                        {lang === 'ES' && 'Español'}
                        {lang === 'EN' && 'English'}
@@ -332,7 +304,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                {darkMode ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
             </button>
             
-            {/* Download */}
             <button 
               onClick={onDownloadBackup}
               className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
@@ -341,7 +312,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                <Icons.Download size={20} />
             </button>
 
-            {/* Upload */}
             <div className="relative">
                <button 
                  onClick={() => backupInputRef.current?.click()}
@@ -369,13 +339,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <div className="flex border-b border-stone-100 dark:border-stone-800">
             <button 
               onClick={() => { setInputMode('MANUAL'); setEditingId(null); setManualName(''); setManualIngredients([]); }}
-              className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'MANUAL' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+              className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'MANUAL' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-b-2 border-amber-600' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
               <Icons.Edit size={14} /> {t.manual}
             </button>
             <button 
               onClick={() => { setInputMode('FILE'); setEditingId(null); }}
-              className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'FILE' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+              className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'FILE' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-b-2 border-amber-600' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
               <Icons.File size={14} /> {t.file}
             </button>
@@ -395,7 +365,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <input 
                       type="text" 
                       placeholder="Ej. Pastel de Vainilla"
-                      className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 font-bold text-stone-800 dark:text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-stone-400"
+                      className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 font-bold text-stone-800 dark:text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 placeholder-stone-400"
                       value={manualName}
                       onChange={(e) => setManualName(e.target.value)}
                     />
@@ -407,7 +377,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <input 
                           type="text" 
                           placeholder={t.ingredient}
-                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-amber-500"
                           value={tempIngName}
                           onChange={(e) => setTempIngName(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddOrUpdateIngredient()}
@@ -417,7 +387,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <input 
                           type="number" 
                           placeholder={t.qty}
-                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-rose-500"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400 focus:outline-none focus:border-amber-500"
                           value={tempIngQty}
                           onChange={(e) => setTempIngQty(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && handleAddOrUpdateIngredient()}
@@ -425,7 +395,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       <div className="w-16">
                         <select 
-                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white focus:outline-none focus:border-rose-500"
+                          className="w-full p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white focus:outline-none focus:border-amber-500"
                           value={tempIngUnit}
                           onChange={(e) => setTempIngUnit(e.target.value)}
                         >
@@ -459,10 +429,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <div 
                            key={i} 
                            onClick={() => handleEditIngredientClick(i)}
-                           className={`flex justify-between items-center text-sm p-2 rounded-lg border cursor-pointer transition ${editingIngIndex === i ? 'bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700' : 'bg-rose-50 border-rose-100 dark:bg-rose-900/30 dark:border-rose-900/50 hover:bg-rose-100 dark:hover:bg-rose-900/50'}`}
+                           className={`flex justify-between items-center text-sm p-2 rounded-lg border cursor-pointer transition ${editingIngIndex === i ? 'bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-700' : 'bg-amber-50/50 border-amber-100 dark:bg-amber-900/10 dark:border-amber-900/50 hover:bg-amber-100 dark:hover:bg-amber-900/30'}`}
                         >
                            <div className="flex items-center gap-2">
-                             <span className="font-bold text-rose-600 dark:text-rose-400">{ing.quantity}{ing.unit}</span>
+                             <span className="font-bold text-amber-600 dark:text-amber-400">{ing.quantity}{ing.unit}</span>
                              <span className="text-stone-700 dark:text-stone-300 capitalize">{ing.name}</span>
                              {editingIngIndex === i && <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded ml-2">Editando</span>}
                            </div>
@@ -480,7 +450,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <button 
                     onClick={handleManualSave}
                     disabled={!manualName || manualIngredients.length === 0}
-                    className="w-full py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-200 dark:shadow-none hover:bg-rose-600 disabled:opacity-50 transition-all"
+                    className="w-full py-3 bg-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-200 dark:shadow-none hover:bg-amber-700 disabled:opacity-50 transition-all"
                   >
                     {editingId ? t.updateRecipe : t.saveRecipe}
                   </button>
@@ -488,7 +458,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ) : (
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-center py-12 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:border-rose-400 dark:hover:border-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition cursor-pointer relative group"
+                  className="text-center py-12 border-2 border-dashed border-stone-200 dark:border-stone-700 rounded-xl hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/10 transition cursor-pointer relative group"
                 >
                   <input 
                     ref={fileInputRef}
@@ -497,7 +467,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     className="hidden"
                     onChange={handleFileUpload}
                   />
-                  <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-full flex items-center justify-center mx-auto mb-3 text-rose-500 group-hover:scale-110 transition-transform">
+                  <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-3 text-amber-600 group-hover:scale-110 transition-transform">
                     <Icons.Upload size={32} />
                   </div>
                   <p className="font-bold text-stone-700 dark:text-stone-300">
@@ -516,14 +486,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Recipe List */}
         <div>
           <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icons.Library size={20} className="text-rose-500" /> {t.savedRecipes}
+            <Icons.Library size={20} className="text-amber-600" /> {t.savedRecipes}
           </h2>
           <div className="grid gap-4">
             {recipes.map((recipe) => (
               <div 
                 key={recipe.id}
                 onClick={() => onSelectRecipe(recipe)}
-                className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-rose-200 dark:hover:border-rose-900 transition group relative"
+                className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex items-center gap-4 cursor-pointer hover:shadow-md hover:border-amber-200 dark:hover:border-amber-900 transition group relative"
               >
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-stone-100 dark:bg-stone-800 shrink-0">
                   <img src={recipe.imageUrl || generateRecipeImage(recipe.name)} alt={recipe.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -535,7 +505,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {recipe.ingredients.length} {t.ingredientsCount}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                     <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
+                     <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1">
                        <Icons.Calc size={10} /> {t.analyzeCosts}
                      </span>
                   </div>

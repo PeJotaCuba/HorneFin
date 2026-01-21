@@ -24,6 +24,8 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
   // Mapa de stock: Clave Normalizada -> Cantidad
   const [stock, setStock] = useState<Record<string, number>>({});
+  // Mapa de unidades seleccionadas manualmente: Clave Normalizada -> Unidad
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, string>>({});
 
   const addRecipe = () => {
       if (!selectedRecipeId) return;
@@ -32,7 +34,8 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
           alert('Esta receta ya está en la lista');
           return;
       }
-      setSelectedRecipes([...selectedRecipes, { recipeId: selectedRecipeId, count: 1 }]);
+      // Inicializamos en 0 para que el input salga vacío (placeholder)
+      setSelectedRecipes([...selectedRecipes, { recipeId: selectedRecipeId, count: 0 }]);
       setSelectedRecipeId('');
   };
 
@@ -41,12 +44,16 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
   };
 
   const updateCount = (id: string, newCount: number) => {
-      if (newCount < 1) return;
+      if (newCount < 0) return;
       setSelectedRecipes(selectedRecipes.map(r => r.recipeId === id ? { ...r, count: newCount } : r));
   };
 
   const updateStock = (key: string, val: number) => {
       setStock(prev => ({ ...prev, [key]: val }));
+  };
+
+  const updateUnitOverride = (key: string, newUnit: string) => {
+      setUnitOverrides(prev => ({ ...prev, [key]: newUnit }));
   };
 
   // Aggregation Logic
@@ -61,14 +68,11 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
               const key = normalizeKey(ing.name);
               const pItem = pantry[key];
               
-              // Determinar la unidad objetivo:
-              // 1. Si existe en la Despensa (Costos), USAR ESA UNIDAD (Ej: kg)
-              // 2. Si no, usar la unidad de la receta
-              const targetUnit = pItem ? pItem.unit : ing.unit;
+              const targetUnit = unitOverrides[key] || (pItem ? pItem.unit : ing.unit);
 
               if (!itemsMap[key]) {
                   itemsMap[key] = {
-                      originalName: ing.name, // Preferimos el nombre de la receta para visualización inicial
+                      originalName: ing.name, 
                       normalizedKey: key,
                       totalNeeded: 0,
                       unit: targetUnit,
@@ -78,25 +82,19 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                   };
               }
 
-              // Convertir la cantidad de la receta a la unidad objetivo (Ej: 500g -> 0.5kg)
-              // Esto asegura que la suma sea correcta según cómo se compra el producto
               const convertedQty = convertUnit(ing.quantity, ing.unit, targetUnit);
-
               itemsMap[key].totalNeeded += convertedQty * sel.count;
           });
       });
 
-      // Calcular costos finales basados en lo que falta (Needed - Stock)
       return Object.values(itemsMap).map(item => {
           const inStock = stock[item.normalizedKey] || 0;
           const needToBuy = Math.max(0, item.totalNeeded - inStock);
           
           let cost = 0;
           if (item.pricePerUnit > 0) {
-              // Si tenemos item en despensa, calculamos costo proporcional
                const pItem = pantry[item.normalizedKey];
                if (pItem) {
-                  // Calcular costo asumiendo que compramos la cantidad 'needToBuy' en la unidad 'item.unit'
                   cost = calculateIngredientCost(needToBuy, item.unit, pItem.price, pItem.quantity, pItem.unit);
                }
           }
@@ -104,7 +102,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
           return { ...item, needToBuy, cost };
       });
 
-  }, [selectedRecipes, recipes, pantry, stock]);
+  }, [selectedRecipes, recipes, pantry, stock, unitOverrides]);
 
   const totalCost = shoppingList.reduce((acc, item) => acc + item.cost, 0);
 
@@ -118,11 +116,11 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
         <title>Lista de Compras</title>
         <style>
           body { font-family: 'Arial', sans-serif; padding: 20px; }
-          h1 { color: #8B5CF6; }
+          h1 { color: #D98E28; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; }
-          .total { font-weight: bold; font-size: 1.2em; color: #E11D48; }
+          .total { font-weight: bold; font-size: 1.2em; color: #DC2626; }
         </style>
       </head>
       <body>
@@ -200,7 +198,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-          <span className="bg-emerald-500 text-white p-1.5 rounded-lg">
+          <span className="bg-orange-500 text-white p-1.5 rounded-lg">
              <Icons.Package size={20} />
           </span>
           {t.shoppingTitle}
@@ -227,7 +225,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                  <button 
                    onClick={addRecipe}
                    disabled={!selectedRecipeId}
-                   className="bg-emerald-500 text-white px-4 rounded-xl font-bold disabled:opacity-50"
+                   className="bg-orange-500 text-white px-4 rounded-xl font-bold disabled:opacity-50 hover:bg-orange-600 transition"
                  >
                     {t.add}
                  </button>
@@ -247,9 +245,10 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                                       <span className="px-2 text-xs font-bold text-stone-500">{t.preparations}</span>
                                       <input 
                                         type="number" 
-                                        className="w-12 p-1 bg-transparent text-center font-bold dark:text-white focus:outline-none"
-                                        value={sel.count}
-                                        onChange={(e) => updateCount(sel.recipeId, parseInt(e.target.value) || 1)}
+                                        className="w-12 p-1 bg-transparent text-center font-bold dark:text-white focus:outline-none placeholder-stone-300 dark:placeholder-stone-600"
+                                        placeholder="0"
+                                        value={sel.count === 0 ? '' : sel.count}
+                                        onChange={(e) => updateCount(sel.recipeId, parseInt(e.target.value) || 0)}
                                       />
                                   </div>
                                   <button onClick={() => removeRecipe(sel.recipeId)} className="text-red-400">
@@ -267,15 +266,32 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
               <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden">
                   <div className="p-4 border-b border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center">
                       <span className="font-bold text-stone-700 dark:text-stone-300 uppercase text-xs">{t.ingredientsCount}</span>
-                      <button onClick={() => setStock({})} className="text-xs text-rose-500 font-bold hover:underline">{t.clearList}</button>
+                      <button onClick={() => setStock({})} className="text-xs text-red-500 font-bold hover:underline">{t.clearList}</button>
                   </div>
                   <div className="divide-y divide-stone-100 dark:divide-stone-800">
                       {shoppingList.map((item, idx) => (
                           <div key={idx} className="p-4">
                               <div className="flex justify-between items-start mb-2">
-                                  <div>
+                                  <div className="flex-1">
                                       <p className="font-bold text-stone-800 dark:text-stone-200 capitalize">{item.originalName}</p>
-                                      <p className="text-xs text-stone-500">Total Req: {item.totalNeeded.toFixed(2)} {item.unit}</p>
+                                      
+                                      <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-xs text-stone-500">Total Req: {item.totalNeeded.toFixed(2)}</span>
+                                          <select 
+                                              className="text-xs bg-stone-100 dark:bg-stone-700 rounded px-1 py-0.5 border-none focus:ring-1 focus:ring-orange-500 dark:text-white font-bold"
+                                              value={item.unit}
+                                              onChange={(e) => updateUnitOverride(item.normalizedKey, e.target.value)}
+                                          >
+                                              <option value="kg">kg</option>
+                                              <option value="lb">lb</option>
+                                              <option value="g">g</option>
+                                              <option value="ml">ml</option>
+                                              <option value="l">l</option>
+                                              <option value="oz">oz</option>
+                                              <option value="u">u</option>
+                                              <option value="file">file</option>
+                                          </select>
+                                      </div>
                                   </div>
                                   <div className="text-right">
                                       <p className="font-bold text-stone-900 dark:text-white">${item.cost.toFixed(2)}</p>
@@ -284,18 +300,18 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                               
                               <div className="flex gap-4 items-center bg-stone-50 dark:bg-stone-800 p-2 rounded-lg">
                                   <div className="flex-1">
-                                      <label className="text-[10px] uppercase font-bold text-stone-400 block">{t.inStock}</label>
+                                      <label className="text-[10px] uppercase font-bold text-stone-400 block">{t.inStock} ({item.unit})</label>
                                       <input 
                                         type="number" 
-                                        className="w-full bg-transparent font-bold text-stone-600 dark:text-stone-300 focus:outline-none border-b border-stone-300 focus:border-emerald-500"
+                                        className="w-full bg-transparent font-bold text-stone-600 dark:text-stone-300 focus:outline-none border-b border-stone-300 focus:border-orange-500"
                                         placeholder="0"
                                         value={stock[item.normalizedKey] || ''}
                                         onChange={(e) => updateStock(item.normalizedKey, parseFloat(e.target.value) || 0)}
                                       />
                                   </div>
                                   <div className="flex-1 border-l pl-4 border-stone-200 dark:border-stone-700">
-                                      <label className="text-[10px] uppercase font-bold text-rose-500 block">{t.need}</label>
-                                      <p className="font-bold text-rose-600 dark:text-rose-400">
+                                      <label className="text-[10px] uppercase font-bold text-red-500 block">{t.need}</label>
+                                      <p className="font-bold text-red-600 dark:text-red-400">
                                           {item.needToBuy.toFixed(2)} <span className="text-xs">{item.unit}</span>
                                       </p>
                                   </div>
@@ -321,7 +337,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                   </button>
                   <button 
                     onClick={handleWhatsApp}
-                    className="py-3 bg-emerald-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-emerald-200 dark:shadow-none"
+                    className="py-3 bg-orange-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-200 dark:shadow-none hover:bg-orange-600 transition"
                   >
                       <Icons.Globe size={18} /> {t.shareWhatsapp}
                   </button>

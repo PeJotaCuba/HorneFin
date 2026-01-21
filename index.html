@@ -4,8 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HorneFin - Finanzas de Repostería</title>
-    <!-- Placeholder favicon -->
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧁</text></svg>">
+    <!-- Logo actualizado -->
+    <link rel="icon" href="/logo.png">
     
     <!-- RESTAURADO: Tailwind vía CDN para recuperar el diseño colorido inmediatamente -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,11 +17,28 @@
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
             },
+            colors: {
+               brand: {
+                 brown: '#5D2E1F',
+                 gold: '#D98E28',
+                 cream: '#FEF3C7',
+                 red: '#DC2626'
+               }
+            }
           }
         }
       }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      @keyframes loading-bar {
+        0% { width: 0%; }
+        100% { width: 100%; }
+      }
+      .animate-loading {
+        animation: loading-bar 2.5s ease-in-out forwards;
+      }
+    </style>
 <script type="importmap">
 {
   "imports": {

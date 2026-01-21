@@ -19,9 +19,6 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
     const uniqueIngredients = new Set<string>();
     recipes.forEach(r => r.ingredients.forEach(i => uniqueIngredients.add(normalizeKey(i.name))));
     
-    // Convertir el Set de claves a items
-    // IMPORTANTE: Al iterar sobre las claves únicas normalizadas, necesitamos el nombre original para mostrar
-    // Usamos el nombre original de la primera ocurrencia en las recetas
     const keyToOriginalName: Record<string, string> = {};
     recipes.forEach(r => r.ingredients.forEach(i => {
        const key = normalizeKey(i.name);
@@ -31,10 +28,10 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
     const combinedItems: PantryItem[] = Array.from(uniqueIngredients).map(key => {
       const existing = pantry[key];
       return existing || {
-        name: keyToOriginalName[key] || key, // Usar nombre original si es posible
+        name: keyToOriginalName[key] || key, 
         price: 0,
         quantity: 1,
-        unit: getDefaultUnit(keyToOriginalName[key] || key) // Auto-detect unit
+        unit: getDefaultUnit(keyToOriginalName[key] || key) 
       };
     });
 
@@ -58,7 +55,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-          <span className="bg-amber-400 text-white p-1.5 rounded-lg">
+          <span className="bg-amber-500 text-white p-1.5 rounded-lg">
              <Icons.Money size={20} />
           </span>
           {t.pantryTitle}
@@ -70,7 +67,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
           <input 
             type="text" 
             placeholder={t.searchPlaceholder}
-            className="w-full pl-9 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 text-stone-900 dark:text-white placeholder-stone-400"
+            className="w-full pl-9 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-amber-500 text-stone-900 dark:text-white placeholder-stone-400"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
           />
@@ -97,7 +94,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                   <input 
                     type="number" 
                     placeholder="0.00"
-                    className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-stone-800 dark:text-white focus:border-amber-400 focus:outline-none"
+                    className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-stone-800 dark:text-white focus:border-amber-500 focus:outline-none"
                     value={item.price === 0 ? '' : item.price}
                     onChange={(e) => handleUpdateItem(idx, 'price', parseFloat(e.target.value) || 0)}
                   />
@@ -107,7 +104,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
                  <input 
                     type="number" 
-                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-400 focus:outline-none dark:text-white"
+                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-500 focus:outline-none dark:text-white"
                     value={item.quantity === 0 ? '' : item.quantity}
                     onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                   />
@@ -115,7 +112,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
               <div className="w-24">
                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
                  <select 
-                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm bg-white dark:text-white focus:border-amber-400 focus:outline-none"
+                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm bg-white dark:text-white focus:border-amber-500 focus:outline-none"
                     value={item.unit}
                     onChange={(e) => handleUpdateItem(idx, 'unit', e.target.value)}
                   >

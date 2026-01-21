@@ -35,9 +35,9 @@ export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView, t }) 
             <div key={item.id} className="relative flex flex-col items-center justify-center">
               {/* Informational Tooltip */}
               {isHovered && (
-                <div className="absolute -top-12 bg-stone-800 text-white text-[10px] font-bold py-1 px-3 rounded-lg shadow-lg whitespace-nowrap z-50 animate-bounce">
+                <div className="absolute -top-12 bg-amber-950 text-white text-[10px] font-bold py-1 px-3 rounded-lg shadow-lg whitespace-nowrap z-50 animate-bounce">
                   {item.info}
-                  <div className="absolute bottom-[-4px] left-1/2 transform -translate-x-1/2 w-2 h-2 bg-stone-800 rotate-45"></div>
+                  <div className="absolute bottom-[-4px] left-1/2 transform -translate-x-1/2 w-2 h-2 bg-amber-950 rotate-45"></div>
                 </div>
               )}
               
@@ -48,7 +48,7 @@ export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView, t }) 
                 onTouchStart={() => setHoveredItem(item.id)}
                 onTouchEnd={() => setHoveredItem(null)}
                 className={`flex flex-col items-center justify-center w-20 transition-colors duration-200 ${
-                  isActive ? 'text-rose-500' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
+                  isActive ? 'text-amber-600' : 'text-stone-400 dark:text-stone-500 hover:text-stone-600 dark:hover:text-stone-300'
                 }`}
               >
                 <item.icon size={24} strokeWidth={isActive ? 2.5 : 2} className="mb-1" />

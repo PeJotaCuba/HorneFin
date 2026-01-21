@@ -28,21 +28,17 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(recipe.name);
   
-  // Batch Settings
   const [batchSize, setBatchSize] = useState(12);
   const [batchesPerDay, setBatchesPerDay] = useState(1);
   const [desiredMargin, setDesiredMargin] = useState(45);
   
-  // Form State
   const [pantryFormValues, setPantryFormValues] = useState<Record<string, PantryItem>>({});
   const [otherExpenses, setOtherExpenses] = useState<string>(recipe.otherExpenses?.toString() || '');
 
-  // Inicializar formulario con datos de la despensa global o defaults
   useEffect(() => {
     const initialForm: Record<string, PantryItem> = {};
     recipe.ingredients.forEach(ing => {
       const key = normalizeKey(ing.name);
-      // Busca en despensa usando clave normalizada
       initialForm[key] = pantry[key] || {
         name: ing.name,
         price: 0,
@@ -59,10 +55,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   }, [initialEditMode, recipe.id]);
 
   const handlePantrySubmit = () => {
-    // 1. Enviar precios a la despensa global
     onUpdatePantry(Object.values(pantryFormValues));
     
-    // 2. Calcular costo TOTAL basado en los valores que ACABAMOS de editar
     let calculatedTotal = 0;
     
     recipe.ingredients.forEach(ing => {
@@ -78,7 +72,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     const extras = parseFloat(otherExpenses) || 0;
     calculatedTotal += extras;
 
-    // 3. Actualizar receta
     const updatedRecipe = { 
       ...recipe, 
       otherExpenses: extras,
@@ -106,7 +99,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
      setIsEditingName(false);
   };
 
-  // Cálculos en tiempo real
   const calculations = useMemo(() => {
     let totalMaterialsCost = 0;
     
@@ -144,11 +136,9 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     };
   }, [recipe, pantry, pantryFormValues, mode, batchSize, batchesPerDay, desiredMargin]);
 
-  // Función para exportar reporte a "Word" (HTML disfrazado)
   const handleExportReport = () => {
     const date = new Date().toLocaleDateString();
     
-    // Construcción del HTML para el reporte
     const htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
@@ -156,7 +146,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         <title>${recipe.name} - Reporte</title>
         <style>
           body { font-family: 'Arial', sans-serif; padding: 20px; }
-          h1 { color: #E11D48; }
+          h1 { color: #DC2626; }
           table { width: 100%; border-collapse: collapse; margin-top: 20px; }
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; color: #333; }
@@ -211,7 +201,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
       </html>
     `;
 
-    // Crear blob y descargar
     const blob = new Blob(['\ufeff', htmlContent], {
       type: 'application/msword'
     });
@@ -224,11 +213,9 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     document.body.removeChild(link);
   };
 
-  // FORMULARIO DE EDICIÓN DE PRECIOS - Layout Flexbox Corregido
   if (showPantryForm) {
     return (
       <div className="fixed inset-0 z-[100] bg-stone-50 dark:bg-stone-950 flex flex-col h-[100dvh]">
-        {/* Header (Fijo) */}
         <div className="flex-none bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
           <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
@@ -236,7 +223,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           </button>
         </div>
 
-        {/* Contenido Scrollable */}
         <div className="flex-1 overflow-y-auto p-4">
             <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 p-3 rounded-lg border border-amber-100 dark:border-amber-900/50">
               <p>{t.pricesInfo}</p>
@@ -254,7 +240,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                         <input 
                           type="number" 
                           placeholder="0.00"
-                          className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-rose-500 focus:outline-none"
+                          className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-red-500 focus:outline-none"
                           value={item.price === 0 ? '' : item.price}
                           onChange={(e) => handlePantryChange(normalizeKey(item.name), 'price', parseFloat(e.target.value) || 0)}
                         />
@@ -264,7 +250,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                        <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
                        <input 
                           type="number" 
-                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
+                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-red-500 focus:outline-none"
                           value={item.quantity === 0 ? '' : item.quantity}
                           onChange={(e) => handlePantryChange(normalizeKey(item.name), 'quantity', parseFloat(e.target.value) || 0)}
                         />
@@ -272,7 +258,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                     <div className="w-24">
                        <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
                        <select 
-                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-rose-500 focus:outline-none"
+                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-red-500 focus:outline-none"
                           value={item.unit}
                           onChange={(e) => handlePantryChange(normalizeKey(item.name), 'unit', e.target.value)}
                         >
@@ -291,17 +277,17 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
               ))}
 
               {/* Other Expenses */}
-              <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6 mb-4">
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl p-4 shadow-sm mt-6 mb-4">
                  <div className="flex items-center gap-2 mb-3">
-                   <Icons.Settings className="text-rose-500" size={20} />
-                   <p className="font-bold text-lg text-rose-800 dark:text-rose-200">{t.otherExpenses}</p>
+                   <Icons.Settings className="text-red-500" size={20} />
+                   <p className="font-bold text-lg text-red-800 dark:text-red-200">{t.otherExpenses}</p>
                  </div>
-                 <p className="text-xs text-rose-600 dark:text-rose-300 mb-2">{t.otherExpensesHint}</p>
+                 <p className="text-xs text-red-600 dark:text-red-300 mb-2">{t.otherExpensesHint}</p>
                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-rose-400 font-bold">$</span>
+                    <span className="absolute left-3 top-2.5 text-red-400 font-bold">$</span>
                     <input 
                       type="number" 
-                      className="w-full pl-6 p-3 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-900/50 rounded-lg font-bold text-lg dark:text-white focus:border-rose-500 focus:outline-none"
+                      className="w-full pl-6 p-3 bg-white dark:bg-stone-800 border border-red-200 dark:border-red-900/50 rounded-lg font-bold text-lg dark:text-white focus:border-red-500 focus:outline-none"
                       value={otherExpenses}
                       onChange={(e) => setOtherExpenses(e.target.value)}
                       placeholder="0.00"
@@ -311,7 +297,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             </div>
         </div>
 
-        {/* Footer con Botón Guardar (Fijo al fondo del modal, pero dentro del flex) */}
         <div className="flex-none p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 shadow-[0_-5px_15px_rgba(0,0,0,0.1)]">
           <button 
             onClick={handlePantrySubmit}
@@ -324,10 +309,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     );
   }
 
-  // VISTA DE ANÁLISIS FINANCIERO (RESUMEN)
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
-      {/* Header */}
       <div className="bg-white dark:bg-stone-900 p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between border-b border-stone-100 dark:border-stone-800 no-print">
         <button onClick={onBack} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition">
            <Icons.Back className="text-stone-600 dark:text-stone-400" />
@@ -336,7 +319,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         {isEditingName ? (
            <input 
               autoFocus
-              className="font-bold text-stone-900 dark:text-white bg-transparent border-b border-rose-500 focus:outline-none text-center flex-1 mx-2"
+              className="font-bold text-stone-900 dark:text-white bg-transparent border-b border-amber-500 focus:outline-none text-center flex-1 mx-2"
               value={editedName}
               onChange={(e) => setEditedName(e.target.value)}
               onBlur={saveName}
@@ -345,7 +328,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         ) : (
            <h1 
               onClick={() => setIsEditingName(true)}
-              className="font-bold text-stone-900 dark:text-white truncate max-w-[200px] cursor-pointer hover:text-rose-500 flex items-center gap-2"
+              className="font-bold text-stone-900 dark:text-white truncate max-w-[200px] cursor-pointer hover:text-amber-500 flex items-center gap-2"
            >
               {recipe.name} <Icons.Edit size={14} className="text-stone-300 dark:text-stone-600" />
            </h1>
@@ -365,29 +348,26 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
 
       <div className="p-4 space-y-6 print:space-y-4">
         
-        {/* Toggle Mode */}
         <div className="bg-stone-100 dark:bg-stone-900 p-1 rounded-xl flex no-print">
           <button 
             onClick={() => setMode('SINGLE')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'SINGLE' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'SINGLE' ? 'bg-white dark:bg-stone-800 text-amber-600 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
           >
             {t.single}
           </button>
           <button 
             onClick={() => setMode('BATCH')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'BATCH' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'BATCH' ? 'bg-white dark:bg-stone-800 text-amber-600 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
           >
             {t.batch}
           </button>
         </div>
         
-        {/* Print Title Only */}
         <div className="hidden print:block text-center mb-4">
             <h1 className="text-2xl font-bold">{recipe.name}</h1>
             <p className="text-sm text-gray-500">Reporte Financiero - HorneFin</p>
         </div>
 
-        {/* Configuration for Batch (RESTAURADO) */}
         {mode === 'BATCH' && (
           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 space-y-3 print:border-gray-300">
              <div className="flex justify-between items-center">
@@ -396,7 +376,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                   type="number" 
                   value={batchSize} 
                   onChange={(e) => setBatchSize(Number(e.target.value))}
-                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-amber-400 focus:outline-none"
                 />
              </div>
              <div className="flex justify-between items-center">
@@ -405,15 +385,14 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                   type="number" 
                   value={batchesPerDay} 
                   onChange={(e) => setBatchesPerDay(Number(e.target.value))}
-                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-amber-400 focus:outline-none"
                 />
              </div>
           </div>
         )}
 
-        {/* Main Financial Card */}
         <div className="bg-stone-900 dark:bg-stone-800 rounded-3xl p-6 text-white shadow-xl shadow-stone-300 dark:shadow-none relative overflow-hidden print:bg-white print:text-black print:border print:border-black print:shadow-none">
-           <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500 blur-[60px] opacity-20 rounded-full print:hidden"></div>
+           <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500 blur-[60px] opacity-20 rounded-full print:hidden"></div>
            <div className="relative z-10">
              <div className="flex justify-between items-start mb-6">
                 <div>
@@ -429,7 +408,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                 <div>
                    <div className="flex justify-between mb-1">
                      <label className="text-xs font-bold text-stone-400 uppercase print:text-black">{t.desiredMargin}</label>
-                     <span className="text-xs font-bold text-rose-400 print:text-black">{desiredMargin}%</span>
+                     <span className="text-xs font-bold text-red-400 print:text-black">{desiredMargin}%</span>
                    </div>
                    <input 
                     type="range" 
@@ -437,7 +416,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                     max="100" 
                     value={desiredMargin} 
                     onChange={(e) => setDesiredMargin(Number(e.target.value))}
-                    className="w-full h-2 bg-stone-700 dark:bg-stone-900 rounded-lg appearance-none cursor-pointer accent-rose-500 no-print"
+                    className="w-full h-2 bg-stone-700 dark:bg-stone-900 rounded-lg appearance-none cursor-pointer accent-red-500 no-print"
                    />
                 </div>
                 
@@ -451,7 +430,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                 <div className="grid grid-cols-2 gap-4 pt-2">
                    <div>
                       <p className="text-[10px] uppercase text-stone-500 font-bold print:text-black">{t.profit} {mode === 'BATCH' ? t.daily : ''}</p>
-                      <p className="text-lg font-bold text-rose-300 print:text-black">${calculations.dailyProfit.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-amber-300 print:text-black">${calculations.dailyProfit.toFixed(2)}</p>
                    </div>
                    <div className="text-right">
                        <p className="text-[10px] uppercase text-stone-500 font-bold print:text-black">{t.totalRevenue}</p>
@@ -462,7 +441,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
            </div>
         </div>
 
-        {/* Breakdown */}
         <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden print:border-gray-300">
            <div className="p-4 bg-stone-50 dark:bg-stone-800/50 border-b border-stone-100 dark:border-stone-800 font-bold text-stone-700 dark:text-stone-300 flex justify-between print:bg-gray-100 print:border-gray-300">
               <span className="print:text-black">{t.costBreakdown}</span>
@@ -482,14 +460,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                 </div>
               ))}
               
-              {/* Other Expenses Item in Breakdown */}
               {calculations.extras > 0 && (
-                 <div className="p-4 flex justify-between items-center bg-rose-50 dark:bg-rose-900/10 print:bg-gray-50">
+                 <div className="p-4 flex justify-between items-center bg-red-50 dark:bg-red-900/10 print:bg-gray-50">
                     <div>
-                       <p className="font-bold text-rose-800 dark:text-rose-300 print:text-black">Otros Gastos</p>
-                       <p className="text-xs text-rose-500 dark:text-rose-400 print:text-gray-600">Fijo</p>
+                       <p className="font-bold text-red-800 dark:text-red-300 print:text-black">Otros Gastos</p>
+                       <p className="text-xs text-red-500 dark:text-red-400 print:text-gray-600">Fijo</p>
                     </div>
-                    <p className="font-bold text-rose-900 dark:text-rose-200 print:text-black">${calculations.extras.toFixed(2)}</p>
+                    <p className="font-bold text-red-900 dark:text-red-200 print:text-black">${calculations.extras.toFixed(2)}</p>
                  </div>
               )}
 
@@ -500,7 +477,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
            </div>
         </div>
         
-        {/* Re-Open Edit Prices Button */}
         <button 
            onClick={() => setShowPantryForm(true)}
            className="w-full py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white border-2 border-stone-100 dark:border-stone-700 rounded-2xl font-bold shadow-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center justify-center gap-2 no-print"
