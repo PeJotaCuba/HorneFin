@@ -1,8 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Eliminamos los imports de tailwind porque estamos usando el CDN en el HTML */
+/* Esto evita conflictos y asegura que la interfaz cargue rápido */
 
 body {
   font-family: 'Inter', sans-serif;
@@ -13,7 +10,7 @@ body {
   background-color: #0c0a09;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar aesthetics */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
