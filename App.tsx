@@ -59,9 +59,9 @@ export default function App() {
 
   const handleSelectRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
-    // Logic to determine if we should show the price config form immediately.
-    // Check if recipe has totalCost calculated (meaning it has been saved in CostAnalysis before)
-    if (!recipe.totalCost || recipe.totalCost === 0) {
+    // Lógica corrección: Si la receta NO tiene la bandera 'hasPricesConfigured', vamos a editar precios.
+    // Si la tiene, vamos directo a finanzas.
+    if (!recipe.hasPricesConfigured) {
         setInitialEditMode(true);
     } else {
         setInitialEditMode(false);

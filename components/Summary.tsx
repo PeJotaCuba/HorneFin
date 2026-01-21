@@ -54,8 +54,11 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   // Vibrant colors for the pie chart as requested
   const COLORS = ['#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#64748B'];
 
-  const handlePrint = () => {
+  const handleDownloadPDF = () => {
+    const originalTitle = document.title;
+    document.title = "HorneFin_Finanzas_Globales";
     window.print();
+    document.title = originalTitle;
   };
 
   return (
@@ -71,8 +74,12 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
                 </h1>
                 <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
             </div>
-            <button onClick={handlePrint} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700">
-                <Icons.Print size={20} />
+            <button 
+                onClick={handleDownloadPDF} 
+                className="flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+            >
+                <Icons.Download size={18} />
+                <span className="text-xs font-bold">{t.printPdf}</span>
             </button>
         </div>
       </div>

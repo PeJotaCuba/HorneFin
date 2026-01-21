@@ -28,6 +28,7 @@ export interface Recipe {
   totalCost?: number;
   suggestedPrice?: number;
   profitMargin?: number;
+  hasPricesConfigured?: boolean; // Bandera para controlar la redirección
 }
 
 export interface FinancialStats {

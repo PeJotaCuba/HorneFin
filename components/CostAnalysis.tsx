@@ -78,7 +78,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     const updatedRecipe = { 
       ...recipe, 
       otherExpenses: parseFloat(otherExpenses) || 0,
-      totalCost: calculatedTotal 
+      totalCost: calculatedTotal,
+      hasPricesConfigured: true // IMPORTANTE: Marcamos que ya se configuró
     };
     onUpdateRecipe(updatedRecipe);
 
@@ -102,8 +103,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
      setIsEditingName(false);
   };
 
-  const handlePrint = () => {
+  const handleDownloadPDF = () => {
+    // Cambiar título temporalmente para que el nombre del archivo PDF sea correcto
+    const originalTitle = document.title;
+    document.title = `Finanzas_${recipe.name.replace(/\s+/g, '_')}`;
     window.print();
+    // Restaurar título
+    document.title = originalTitle;
   };
 
   const calculations = useMemo(() => {
@@ -144,7 +150,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
 
   if (showPantryForm) {
     return (
-      <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-20">
+      <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-32">
         <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm z-10">
           <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
@@ -221,7 +227,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           </div>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-50">
+        {/* Botón Guardar - Z-index alto y Fixed bottom */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-[60]">
           <button 
             onClick={handlePantrySubmit}
             className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
@@ -260,8 +267,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         )}
         
         <div className="flex gap-2">
-            <button onClick={handlePrint} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400">
-                <Icons.Print size={20} />
+            <button 
+                onClick={handleDownloadPDF} 
+                className="flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+            >
+                <Icons.Download size={18} />
+                <span className="text-xs font-bold">{t.printPdf}</span>
             </button>
         </div>
       </div>
