@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
-import { getDefaultUnit } from '../utils/units';
+import { getDefaultUnit, normalizeKey } from '../utils/units';
 
 interface PantryProps {
   recipes: Recipe[];
@@ -17,15 +17,24 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
   // Combine all ingredients from all recipes into a unique list
   useEffect(() => {
     const uniqueIngredients = new Set<string>();
-    recipes.forEach(r => r.ingredients.forEach(i => uniqueIngredients.add(i.name.toLowerCase())));
+    recipes.forEach(r => r.ingredients.forEach(i => uniqueIngredients.add(normalizeKey(i.name))));
     
-    const combinedItems: PantryItem[] = Array.from(uniqueIngredients).map(name => {
-      const existing = pantry[name];
+    // Convertir el Set de claves a items
+    // IMPORTANTE: Al iterar sobre las claves únicas normalizadas, necesitamos el nombre original para mostrar
+    // Usamos el nombre original de la primera ocurrencia en las recetas
+    const keyToOriginalName: Record<string, string> = {};
+    recipes.forEach(r => r.ingredients.forEach(i => {
+       const key = normalizeKey(i.name);
+       if (!keyToOriginalName[key]) keyToOriginalName[key] = i.name;
+    }));
+    
+    const combinedItems: PantryItem[] = Array.from(uniqueIngredients).map(key => {
+      const existing = pantry[key];
       return existing || {
-        name: name,
+        name: keyToOriginalName[key] || key, // Usar nombre original si es posible
         price: 0,
         quantity: 1,
-        unit: getDefaultUnit(name) // Auto-detect unit
+        unit: getDefaultUnit(keyToOriginalName[key] || key) // Auto-detect unit
       };
     });
 

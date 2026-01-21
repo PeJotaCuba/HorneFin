@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
-import { calculateIngredientCost, getDefaultUnit } from '../utils/units';
+import { calculateIngredientCost, getDefaultUnit, normalizeKey } from '../utils/units';
 
 interface CostAnalysisProps {
   recipe: Recipe;
@@ -22,7 +22,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   initialEditMode = false,
   t 
 }) => {
-  // Use initialEditMode prop to determine if modal opens on load
   const [showPantryForm, setShowPantryForm] = useState(initialEditMode);
   
   const [mode, setMode] = useState<'SINGLE' | 'BATCH'>('SINGLE');
@@ -30,69 +29,65 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   const [editedName, setEditedName] = useState(recipe.name);
   
   // Batch Settings
-  const [batchSize, setBatchSize] = useState(12); // Items per batch
+  const [batchSize, setBatchSize] = useState(12);
   const [batchesPerDay, setBatchesPerDay] = useState(1);
-  const [desiredMargin, setDesiredMargin] = useState(45); // %
+  const [desiredMargin, setDesiredMargin] = useState(45);
   
-  // Staging for Pantry Form & Other Expenses
+  // Form State
   const [pantryFormValues, setPantryFormValues] = useState<Record<string, PantryItem>>({});
   const [otherExpenses, setOtherExpenses] = useState<string>(recipe.otherExpenses?.toString() || '');
 
-  // Initialize form values
+  // Inicializar formulario con datos de la despensa global o defaults
   useEffect(() => {
     const initialForm: Record<string, PantryItem> = {};
     recipe.ingredients.forEach(ing => {
-      const key = ing.name.toLowerCase();
-      // Si existe en despensa, usa eso. Si no, crea uno nuevo con la unidad por defecto
+      const key = normalizeKey(ing.name);
+      // Busca en despensa usando clave normalizada
       initialForm[key] = pantry[key] || {
         name: ing.name,
         price: 0,
         quantity: 1,
-        unit: getDefaultUnit(ing.name) // Auto-detect unit
+        unit: getDefaultUnit(ing.name)
       };
     });
     setPantryFormValues(initialForm);
     setOtherExpenses(recipe.otherExpenses?.toString() || '');
   }, [recipe, pantry]);
 
-  // Si initialEditMode cambia (cuando el usuario hace clic en una nueva receta sin precios), se abre el formulario
   useEffect(() => {
     setShowPantryForm(initialEditMode);
   }, [initialEditMode, recipe.id]);
 
   const handlePantrySubmit = () => {
-    // 1. Actualizar precios globales
+    // 1. Enviar precios a la despensa global
     onUpdatePantry(Object.values(pantryFormValues));
     
-    // 2. IMPORTANTE: Calcular el costo total en este momento con los datos actuales del formulario
-    // No confiar en el estado anterior, usar pantryFormValues directamente
+    // 2. Calcular costo TOTAL basado en los valores que ACABAMOS de editar
+    // (No confiamos en props.pantry todavía porque React puede tardar en actualizar)
     let calculatedTotal = 0;
     
     recipe.ingredients.forEach(ing => {
-        const key = ing.name.toLowerCase();
-        const pItem = pantryFormValues[key]; // Usar el item del formulario actual
+        const key = normalizeKey(ing.name);
+        const pItem = pantryFormValues[key];
+        
         if (pItem && pItem.price > 0) {
             const cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
             calculatedTotal += cost;
         }
     });
 
-    // Sumar otros gastos
     const extras = parseFloat(otherExpenses) || 0;
     calculatedTotal += extras;
 
-    // 3. Crear el objeto receta actualizado
+    // 3. Actualizar receta
     const updatedRecipe = { 
       ...recipe, 
       otherExpenses: extras,
-      totalCost: calculatedTotal, // Guardamos el costo calculado inmediatamente
+      totalCost: calculatedTotal,
       hasPricesConfigured: true
     };
     
-    // 4. Actualizar en la App
     onUpdateRecipe(updatedRecipe);
-
-    // 5. Cerrar formulario para ver el Resumen (que ahora tendrá el costo > 0)
     setShowPantryForm(false);
   };
 
@@ -119,11 +114,17 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     document.title = originalTitle;
   };
 
+  // Cálculos en tiempo real para la vista de resumen
   const calculations = useMemo(() => {
     let totalMaterialsCost = 0;
+    
     const ingredientBreakdown = recipe.ingredients.map(ing => {
-      const key = ing.name.toLowerCase();
-      const pantryItem = pantry[key];
+      const key = normalizeKey(ing.name);
+      
+      // Intentamos usar el valor global (pantry), si no existe (porque acabamos de guardar
+      // y la prop no ha llegado), usamos el valor del formulario local si existe.
+      const pantryItem = pantry[key] || pantryFormValues[key];
+      
       let cost = 0;
       if (pantryItem && pantryItem.price > 0) {
         cost = calculateIngredientCost(ing.quantity, ing.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
@@ -132,12 +133,11 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
       return { ...ing, cost };
     });
 
-    // Add other expenses to the total recipe cost
     const extras = recipe.otherExpenses || 0;
     const totalRecipeCost = totalMaterialsCost + extras;
 
     const costPerItem = mode === 'SINGLE' ? totalRecipeCost : (totalRecipeCost / batchSize);
-    const suggestedPrice = costPerItem / (1 - (desiredMargin / 100));
+    const suggestedPrice = costPerItem > 0 ? costPerItem / (1 - (desiredMargin / 100)) : 0;
     
     const itemsSold = mode === 'SINGLE' ? 1 : batchSize * batchesPerDay;
     const totalDailyRevenue = suggestedPrice * itemsSold;
@@ -153,100 +153,108 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
       dailyProfit,
       extras
     };
-  }, [recipe, pantry, mode, batchSize, batchesPerDay, desiredMargin]);
+  }, [recipe, pantry, pantryFormValues, mode, batchSize, batchesPerDay, desiredMargin]);
 
+  // FORMULARIO DE EDICIÓN DE PRECIOS
   if (showPantryForm) {
     return (
-      <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-32">
-        <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm z-10">
+      <div className="fixed inset-0 z-50 flex flex-col bg-stone-50 dark:bg-stone-950">
+        {/* Header Modal */}
+        <div className="bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm shrink-0">
           <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
              <Icons.Close />
           </button>
         </div>
-        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 border-b border-amber-100 dark:border-amber-900/50">
-          <p>{t.pricesInfo}</p>
-        </div>
-        <div className="p-4 space-y-4">
-          {Object.values(pantryFormValues).map((item: PantryItem, idx) => (
-            <div key={idx} className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-xl p-4 shadow-sm">
-              <p className="font-bold text-lg capitalize mb-3 text-stone-800 dark:text-stone-200">{item.name}</p>
-              <div className="flex gap-2">
-                <div className="flex-1">
-                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.purchasePrice}</label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-stone-400">$</span>
-                    <input 
-                      type="number" 
-                      className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-rose-500 focus:outline-none"
-                      value={item.price}
-                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'price', parseFloat(e.target.value))}
-                    />
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4 pb-32">
+            <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 p-3 rounded-lg border border-amber-100 dark:border-amber-900/50">
+              <p>{t.pricesInfo}</p>
+            </div>
+            
+            <div className="space-y-4">
+              {Object.values(pantryFormValues).map((item: PantryItem, idx) => (
+                <div key={idx} className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-xl p-4 shadow-sm">
+                  <p className="font-bold text-lg capitalize mb-3 text-stone-800 dark:text-stone-200">{item.name}</p>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.purchasePrice}</label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-2.5 text-stone-400">$</span>
+                        <input 
+                          type="number" 
+                          className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-rose-500 focus:outline-none"
+                          value={item.price}
+                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'price', parseFloat(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-20">
+                       <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
+                       <input 
+                          type="number" 
+                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
+                          value={item.quantity}
+                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'quantity', parseFloat(e.target.value))}
+                        />
+                    </div>
+                    <div className="w-24">
+                       <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
+                       <select 
+                          className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-rose-500 focus:outline-none"
+                          value={item.unit}
+                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'unit', e.target.value)}
+                        >
+                          <option value="kg">kg</option>
+                          <option value="lb">lb</option>
+                          <option value="g">g</option>
+                          <option value="ml">ml</option>
+                          <option value="l">l</option>
+                          <option value="oz">oz</option>
+                          <option value="u">u</option>
+                          <option value="file">file (30u)</option>
+                       </select>
+                    </div>
                   </div>
                 </div>
-                <div className="w-20">
-                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
-                   <input 
+              ))}
+
+              {/* Other Expenses */}
+              <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6">
+                 <div className="flex items-center gap-2 mb-3">
+                   <Icons.Settings className="text-rose-500" size={20} />
+                   <p className="font-bold text-lg text-rose-800 dark:text-rose-200">{t.otherExpenses}</p>
+                 </div>
+                 <p className="text-xs text-rose-600 dark:text-rose-300 mb-2">{t.otherExpensesHint}</p>
+                 <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-rose-400 font-bold">$</span>
+                    <input 
                       type="number" 
-                      className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
-                      value={item.quantity}
-                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'quantity', parseFloat(e.target.value))}
+                      className="w-full pl-6 p-3 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-900/50 rounded-lg font-bold text-lg dark:text-white focus:border-rose-500 focus:outline-none"
+                      value={otherExpenses}
+                      onChange={(e) => setOtherExpenses(e.target.value)}
+                      placeholder="0.00"
                     />
-                </div>
-                <div className="w-24">
-                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
-                   <select 
-                      className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-rose-500 focus:outline-none"
-                      value={item.unit}
-                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'unit', e.target.value)}
-                    >
-                      <option value="kg">kg</option>
-                      <option value="lb">lb</option>
-                      <option value="g">g</option>
-                      <option value="ml">ml</option>
-                      <option value="l">l</option>
-                      <option value="oz">oz</option>
-                      <option value="u">u</option>
-                      <option value="file">file (30u)</option>
-                   </select>
-                </div>
+                 </div>
               </div>
             </div>
-          ))}
-
-          {/* Other Expenses Field */}
-          <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6">
-             <div className="flex items-center gap-2 mb-3">
-               <Icons.Settings className="text-rose-500" size={20} />
-               <p className="font-bold text-lg text-rose-800 dark:text-rose-200">{t.otherExpenses}</p>
-             </div>
-             <p className="text-xs text-rose-600 dark:text-rose-300 mb-2">{t.otherExpensesHint}</p>
-             <div className="relative">
-                <span className="absolute left-3 top-2.5 text-rose-400 font-bold">$</span>
-                <input 
-                  type="number" 
-                  className="w-full pl-6 p-3 bg-white dark:bg-stone-800 border border-rose-200 dark:border-rose-900/50 rounded-lg font-bold text-lg dark:text-white focus:border-rose-500 focus:outline-none"
-                  value={otherExpenses}
-                  onChange={(e) => setOtherExpenses(e.target.value)}
-                  placeholder="0.00"
-                />
-             </div>
-          </div>
         </div>
 
-        {/* Botón Guardar - Fixed y Z-Index Alto */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-[60] shadow-2xl">
+        {/* Footer Fixed Button */}
+        <div className="p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 shadow-[0_-5px_15px_rgba(0,0,0,0.1)] z-50 shrink-0">
           <button 
             onClick={handlePantrySubmit}
-            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
+            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-4 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
           >
-            <Icons.Save size={20} /> {t.savePrices}
+            <Icons.Save size={22} /> {t.savePrices}
           </button>
         </div>
       </div>
     );
   }
 
+  // VISTA DE ANÁLISIS FINANCIERO (RESUMEN)
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
       {/* Header */}

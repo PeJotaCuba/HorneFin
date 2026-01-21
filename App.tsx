@@ -7,6 +7,7 @@ import { Summary } from './components/Summary';
 import { Guide } from './components/Guide';
 import { NavBar } from './components/NavBar';
 import { TRANSLATIONS, Language } from './utils/translations';
+import { normalizeKey } from './utils/units';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
@@ -59,8 +60,8 @@ export default function App() {
 
   const handleSelectRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
-    // Lógica corrección: Si la receta NO tiene la bandera 'hasPricesConfigured', vamos a editar precios.
-    // Si la tiene, vamos directo a finanzas.
+    // Si NO tiene precios configurados, forzamos el modo edición.
+    // Si YA tiene precios, mostramos el análisis financiero.
     if (!recipe.hasPricesConfigured) {
         setInitialEditMode(true);
     } else {
@@ -89,7 +90,8 @@ export default function App() {
   const handleUpdatePantry = (items: PantryItem[]) => {
     const newPantry = { ...pantry };
     items.forEach(item => {
-      newPantry[item.name.toLowerCase()] = item;
+      // Usar clave normalizada para evitar duplicados por mayúsculas/espacios
+      newPantry[normalizeKey(item.name)] = item;
     });
     setPantry(newPantry);
   };
@@ -125,7 +127,7 @@ export default function App() {
   return (
     <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-stone-50'}`}>
       
-      {/* Views Container - Add padding bottom so navbar doesn't cover content */}
+      {/* Views Container */}
       <div className="h-full">
         {currentView === AppView.DASHBOARD && (
           <Dashboard 

@@ -22,9 +22,14 @@ export const normalizeUnit = (unit: string): string => {
   return unit.toLowerCase().replace(/s$/, ''); // Remove trailing s
 };
 
+// Clave única para ingredientes: minúsculas y sin espacios extra
+export const normalizeKey = (name: string): string => {
+  return name.trim().toLowerCase();
+};
+
 // Helper para preestablecer unidades según el nombre del ingrediente
 export const getDefaultUnit = (name: string): string => {
-  const n = name.toLowerCase();
+  const n = normalizeKey(name);
   
   if (n.includes('huevo')) return 'file';
   if (n.includes('harina')) return 'kg';
@@ -63,6 +68,5 @@ export const calculateIngredientCost = (
   }
 
   // Fallback if conversion fails (return 0 or handle error visually)
-  console.warn(`Cannot convert ${rUnit} to ${pUnit}`);
   return 0;
 };
