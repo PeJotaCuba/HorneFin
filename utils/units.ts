@@ -42,6 +42,27 @@ export const getDefaultUnit = (name: string): string => {
   return 'kg';
 };
 
+// Convert quantity from one unit to another
+export const convertUnit = (quantity: number, fromUnit: string, toUnit: string): number => {
+  const f = normalizeUnit(fromUnit);
+  const t = normalizeUnit(toUnit);
+  
+  if (f === t) return quantity;
+
+  const fromRate = CONVERSION_RATES[f];
+  const toRate = CONVERSION_RATES[t];
+
+  // If both units have conversion rates to a base unit (g/ml)
+  if (fromRate && toRate) {
+    // (Quantity * FromRate) = Total Base Units
+    // Total Base Units / ToRate = New Quantity
+    return (quantity * fromRate) / toRate;
+  }
+
+  // Fallback: return original if conversion impossible (e.g. g to u)
+  return quantity;
+};
+
 export const calculateIngredientCost = (
   recipeQty: number,
   recipeUnit: string,

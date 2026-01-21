@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
-import { calculateIngredientCost, normalizeKey } from '../utils/units';
+import { calculateIngredientCost, normalizeKey, convertUnit } from '../utils/units';
 
 interface ShoppingProps {
   recipes: Recipe[];
@@ -61,22 +61,28 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
               const key = normalizeKey(ing.name);
               const pItem = pantry[key];
               
+              // Determinar la unidad objetivo:
+              // 1. Si existe en la Despensa (Costos), USAR ESA UNIDAD (Ej: kg)
+              // 2. Si no, usar la unidad de la receta
+              const targetUnit = pItem ? pItem.unit : ing.unit;
+
               if (!itemsMap[key]) {
                   itemsMap[key] = {
-                      originalName: ing.name,
+                      originalName: ing.name, // Preferimos el nombre de la receta para visualización inicial
                       normalizedKey: key,
                       totalNeeded: 0,
-                      unit: ing.unit,
+                      unit: targetUnit,
                       pricePerUnit: pItem ? pItem.price : 0,
-                      purchaseUnit: pItem ? pItem.unit : ing.unit,
+                      purchaseUnit: pItem ? pItem.unit : targetUnit,
                       cost: 0
                   };
               }
 
-              // Sumar cantidad necesaria
-              // Nota: Asumimos unidades compatibles para la suma simple visual. 
-              // En un sistema real complejo se requeriría conversión dinámica si las unidades difieren entre recetas.
-              itemsMap[key].totalNeeded += ing.quantity * sel.count;
+              // Convertir la cantidad de la receta a la unidad objetivo (Ej: 500g -> 0.5kg)
+              // Esto asegura que la suma sea correcta según cómo se compra el producto
+              const convertedQty = convertUnit(ing.quantity, ing.unit, targetUnit);
+
+              itemsMap[key].totalNeeded += convertedQty * sel.count;
           });
       });
 
@@ -87,10 +93,10 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
           
           let cost = 0;
           if (item.pricePerUnit > 0) {
-              // Calcular costo usando la función utilitaria, asumiendo que compramos "needToBuy" cantidad
-              // cost = (needToBuy / purchaseQty) * purchasePrice -> simplificado a costo proporcional
+              // Si tenemos item en despensa, calculamos costo proporcional
                const pItem = pantry[item.normalizedKey];
                if (pItem) {
+                  // Calcular costo asumiendo que compramos la cantidad 'needToBuy' en la unidad 'item.unit'
                   cost = calculateIngredientCost(needToBuy, item.unit, pItem.price, pItem.quantity, pItem.unit);
                }
           }
