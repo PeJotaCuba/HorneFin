@@ -86,7 +86,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const removeIngredient = (index: number) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este ingrediente?")) {
+    if (window.confirm(t.confirmDeleteIngredient)) {
       const newIngs = [...manualIngredients];
       newIngs.splice(index, 1);
       setManualIngredients(newIngs);
@@ -223,7 +223,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setEditingId(null); 
       setInputMode('MANUAL'); 
     } else {
-      alert("No se pudieron detectar ingredientes.");
+      alert(t.noIngredientsDetected);
     }
   };
 
@@ -254,8 +254,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="space-y-4">
                   {editingId && (
                     <div className="flex justify-between items-center bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg mb-2">
-                       <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1"><Icons.Edit size={12}/> Editando Receta</span>
-                       <button onClick={handleCancelEdit} className="text-xs underline text-amber-700 dark:text-amber-400">Cancelar</button>
+                       <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1"><Icons.Edit size={12}/> {t.editingRecipe}</span>
+                       <button onClick={handleCancelEdit} className="text-xs underline text-amber-700 dark:text-amber-400">{t.cancel}</button>
                     </div>
                   )}
                   <div>
@@ -316,7 +316,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       disabled={!tempIngName || !tempIngQty}
                       className={`w-full py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 ${editingIngIndex !== null ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-stone-600'}`}
                     >
-                      {editingIngIndex !== null ? 'Actualizar' : t.add}
+                      {editingIngIndex !== null ? t.update : t.add}
                     </button>
                   </div>
 
@@ -332,7 +332,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                            <div className="flex items-center gap-2">
                              <span className="font-bold text-amber-600 dark:text-amber-400">{ing.quantity}{ing.unit}</span>
                              <span className="text-stone-700 dark:text-stone-300 capitalize">{ing.name}</span>
-                             {editingIngIndex === i && <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded ml-2">Editando</span>}
+                             {editingIngIndex === i && <span className="text-[10px] bg-amber-200 text-amber-800 px-1 rounded ml-2">{t.editing}</span>}
                            </div>
                            <button 
                              onClick={(e) => { e.stopPropagation(); removeIngredient(i); }} 
@@ -372,7 +372,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     {t.uploadFile}
                   </p>
                   <p className="text-xs text-stone-400 dark:text-stone-500 mt-2 max-w-[200px] mx-auto leading-relaxed">
-                    Soporta formatos flexibles:<br/>
+                    {t.flexibleFormats}<br/>
                     <span className="font-mono text-[10px] bg-stone-100 dark:bg-stone-800 px-1 rounded">- Ingrediente: 200 g</span><br/>
                     <span className="font-mono text-[10px] bg-stone-100 dark:bg-stone-800 px-1 rounded">200 g Ingrediente</span>
                   </p>

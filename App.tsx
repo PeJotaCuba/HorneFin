@@ -11,20 +11,32 @@ import { Header } from './components/Header';
 import { TRANSLATIONS, Language } from './utils/translations';
 import { normalizeKey } from './utils/units';
 
-// Componente Splash Screen
-const SplashScreen = () => (
-  <div className="fixed inset-0 bg-[#FDFBF7] flex flex-col items-center justify-center z-[100]">
-    <div className="relative mb-8 flex flex-col items-center">
+// Componente Splash Screen Actualizado
+const SplashScreen = ({ subtitle }: { subtitle: string }) => (
+  <div className="fixed inset-0 bg-[#FDFBF7] flex flex-col items-center justify-center z-[100] px-6">
+    <div className="relative flex flex-col items-center">
        {/* Círculo decorativo de fondo */}
-       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-amber-100 rounded-full blur-xl opacity-60"></div>
+       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-amber-100 rounded-full blur-2xl opacity-60"></div>
        
-       {/* Logo Vectorial Animado */}
-       <div className="relative z-10 animate-pulse">
-         <Logo className="w-56 h-auto" />
+       {/* Logo Vectorial (Solo Icono) */}
+       <div className="relative z-10 animate-pulse mb-6">
+         <Logo className="w-40 h-40" showText={false} />
+       </div>
+
+       {/* Texto debajo, centrado y responsivo */}
+       <div className="relative z-10 flex flex-col items-center text-center">
+          <div className="flex items-baseline text-5xl mb-3">
+            <span className="font-extrabold text-[#5D2E1F] tracking-tight">Horne</span>
+            <span className="font-extrabold text-[#D98E28] tracking-tight">Fin</span>
+          </div>
+          <span className="text-xs sm:text-sm uppercase tracking-[0.25em] text-stone-500 font-bold">
+            {subtitle}
+          </span>
        </div>
     </div>
     
-    <div className="w-64 h-2 bg-stone-200 rounded-full overflow-hidden mt-4">
+    {/* Barra de carga */}
+    <div className="w-56 h-1.5 bg-stone-200 rounded-full overflow-hidden mt-12 relative z-10">
       <div className="h-full bg-gradient-to-r from-amber-500 to-red-500 animate-loading rounded-full"></div>
     </div>
   </div>
@@ -149,7 +161,7 @@ export default function App() {
 
   const t = TRANSLATIONS[language];
 
-  if (loading) return <SplashScreen />;
+  if (loading) return <SplashScreen subtitle={t.logoSubtitle} />;
 
   return (
     <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-[#FAFAF9]'}`}>

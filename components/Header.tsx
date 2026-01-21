@@ -50,7 +50,11 @@ export const Header: React.FC<HeaderProps> = ({
     <div className={`bg-white dark:bg-stone-900 shadow-sm sticky top-0 z-50 border-b border-stone-100 dark:border-stone-800 transition-all duration-300 ${isCompact ? 'py-2 px-4' : 'py-4 px-6'}`}>
       <div className="flex justify-between items-center max-w-md mx-auto">
         <div className="flex-shrink-0">
-          <Logo className={`transition-all duration-300 ${isCompact ? 'h-10' : 'h-14'} w-auto`} showText={true} />
+          <Logo 
+            className={`transition-all duration-300 ${isCompact ? 'h-10' : 'h-14'} w-auto`} 
+            showText={true} 
+            subtitle={t.logoSubtitle}
+          />
         </div>
         <div className="flex gap-2 items-center">
           <div className="relative">

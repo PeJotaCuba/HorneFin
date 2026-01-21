@@ -139,11 +139,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   const handleExportReport = () => {
     const date = new Date().toLocaleDateString();
     
+    // HTML Template using Translations
     const htmlContent = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>${recipe.name} - Reporte</title>
+        <title>${recipe.name} - ${t.reportTitle}</title>
         <style>
           body { font-family: 'Arial', sans-serif; padding: 20px; }
           h1 { color: #DC2626; }
@@ -156,23 +157,23 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
       </head>
       <body>
         <h1>${recipe.name}</h1>
-        <p><strong>Fecha:</strong> ${date}</p>
-        <p><strong>Modo:</strong> ${mode === 'SINGLE' ? 'Individual' : `Lote (${batchSize} unids)`}</p>
+        <p><strong>${t.reportDate}:</strong> ${date}</p>
+        <p><strong>${t.reportMode}:</strong> ${mode === 'SINGLE' ? t.single : `${t.batch} (${batchSize} u)`}</p>
         
         <div class="card">
-          <h2>Resumen Financiero</h2>
-          <p><strong>Costo Producción:</strong> $${calculations.costPerItem.toFixed(2)}</p>
-          <p><strong>Precio Sugerido:</strong> $${calculations.suggestedPrice.toFixed(2)} (Margen ${desiredMargin}%)</p>
-          <p><strong>Ganancia Estimada:</strong> $${calculations.dailyProfit.toFixed(2)}</p>
+          <h2>${t.reportFinancialSummary}</h2>
+          <p><strong>${t.reportProductionCost}:</strong> $${calculations.costPerItem.toFixed(2)}</p>
+          <p><strong>${t.reportSuggestedPrice}:</strong> $${calculations.suggestedPrice.toFixed(2)} (${t.reportMargin} ${desiredMargin}%)</p>
+          <p><strong>${t.reportEstProfit}:</strong> $${calculations.dailyProfit.toFixed(2)}</p>
         </div>
 
-        <h2>Desglose de Costos</h2>
+        <h2>${t.reportCostBreakdown}</h2>
         <table>
           <thead>
             <tr>
-              <th>Ingrediente</th>
-              <th>Cantidad</th>
-              <th>Costo</th>
+              <th>${t.reportIngredient}</th>
+              <th>${t.reportQty}</th>
+              <th>${t.reportCost}</th>
             </tr>
           </thead>
           <tbody>
@@ -185,18 +186,18 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             `).join('')}
             ${calculations.extras > 0 ? `
               <tr>
-                <td>Otros Gastos (Fijo)</td>
+                <td>${t.otherExpenses}</td>
                 <td>1</td>
                 <td>$${calculations.extras.toFixed(2)}</td>
               </tr>
             ` : ''}
             <tr class="total-row">
-              <td colspan="2">Costo Total Receta</td>
+              <td colspan="2">${t.reportTotalRecipe}</td>
               <td>$${calculations.totalRecipeCost.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
-        <p style="font-size: 10px; color: #888; margin-top: 20px;">Generado con HorneFin App</p>
+        <p style="font-size: 10px; color: #888; margin-top: 20px;">${t.reportGeneratedBy}</p>
       </body>
       </html>
     `;
@@ -365,7 +366,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         
         <div className="hidden print:block text-center mb-4">
             <h1 className="text-2xl font-bold">{recipe.name}</h1>
-            <p className="text-sm text-gray-500">Reporte Financiero - HorneFin</p>
+            <p className="text-sm text-gray-500">{t.reportGeneratedBy}</p>
         </div>
 
         {mode === 'BATCH' && (
@@ -463,7 +464,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
               {calculations.extras > 0 && (
                  <div className="p-4 flex justify-between items-center bg-red-50 dark:bg-red-900/10 print:bg-gray-50">
                     <div>
-                       <p className="font-bold text-red-800 dark:text-red-300 print:text-black">Otros Gastos</p>
+                       <p className="font-bold text-red-800 dark:text-red-300 print:text-black">{t.otherExpenses}</p>
                        <p className="text-xs text-red-500 dark:text-red-400 print:text-gray-600">Fijo</p>
                     </div>
                     <p className="font-bold text-red-900 dark:text-red-200 print:text-black">${calculations.extras.toFixed(2)}</p>

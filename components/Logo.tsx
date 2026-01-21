@@ -3,9 +3,14 @@ import React from 'react';
 interface LogoProps {
   className?: string;
   showText?: boolean;
+  subtitle?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = "w-32 h-auto", showText = true }) => {
+export const Logo: React.FC<LogoProps> = ({ 
+  className = "w-32 h-auto", 
+  showText = true, 
+  subtitle = "Gestión de Repostería" 
+}) => {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
       {/* Icono Vectorial */}
@@ -67,7 +72,7 @@ export const Logo: React.FC<LogoProps> = ({ className = "w-32 h-auto", showText 
             <span className="font-extrabold text-2xl text-[#D98E28] tracking-tight">Fin</span>
           </div>
           <span className="text-[10px] uppercase tracking-wide text-stone-500 dark:text-stone-400 font-bold -mt-0.5 whitespace-nowrap">
-            Gestión de Repostería
+            {subtitle}
           </span>
         </div>
       )}

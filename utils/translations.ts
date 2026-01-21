@@ -3,13 +3,14 @@ export type Language = 'ES' | 'EN' | 'PT';
 export const TRANSLATIONS = {
   ES: {
     appTitle: "HorneFin",
-    appSubtitle: "Gestiona tu repostería",
+    logoSubtitle: "Gestión de Repostería",
     manual: "Manual",
     file: "TXT",
     recipeName: "Nombre de la Receta",
     ingredient: "Ingrediente",
     qty: "Cant.",
     add: "+ Agregar",
+    update: "Actualizar",
     saveRecipe: "Guardar Receta",
     updateRecipe: "Actualizar Receta",
     uploadFile: "Subir Archivo TXT",
@@ -21,6 +22,14 @@ export const TRANSLATIONS = {
     edit: "Editar",
     delete: "Eliminar",
     confirmDelete: "¿Estás seguro de que deseas eliminar esta receta?",
+    editingRecipe: "Editando Receta",
+    cancel: "Cancelar",
+    flexibleFormats: "Soporta formatos flexibles:",
+    noIngredientsDetected: "No se pudieron detectar ingredientes.",
+    confirmDeleteIngredient: "¿Estás seguro de que quieres eliminar este ingrediente?",
+    globalPricesUpdated: "Precios globales actualizados",
+    recipeAlreadyInList: "Esta receta ya está en la lista",
+    
     // Cost Analysis
     updatePrices: "Configurar Precios",
     pricesInfo: "Actualiza los costos de insumos y agrega gastos extra.",
@@ -42,16 +51,34 @@ export const TRANSLATIONS = {
     costBreakdown: "Desglose de Costos",
     basedOn: "Basado en Receta Total",
     totalMaterials: "Total Materiales",
-    otherExpenses: "Otros Gastos (Luz, Gas, Empaque)",
-    otherExpensesHint: "Importe fijo para esta receta",
+    otherExpenses: "Otros Gastos",
+    otherExpensesHint: "Importe fijo para esta receta (Luz, Gas, etc.)",
     noPrice: "Sin Precio",
     printPdf: "Exportar Reporte",
+    
+    // Reports
+    reportTitle: "Reporte",
+    reportDate: "Fecha",
+    reportMode: "Modo",
+    reportFinancialSummary: "Resumen Financiero",
+    reportProductionCost: "Costo Producción",
+    reportSuggestedPrice: "Precio Sugerido",
+    reportEstProfit: "Ganancia Estimada",
+    reportCostBreakdown: "Desglose de Costos",
+    reportIngredient: "Ingrediente",
+    reportQty: "Cantidad",
+    reportCost: "Costo",
+    reportTotalRecipe: "Costo Total Receta",
+    reportGeneratedBy: "Generado con HorneFin App",
+    reportMargin: "Margen",
+
     // Pantry
     pantryTitle: "Costos Globales",
     pantrySubtitle: "Precios de insumos aplicables a todas las recetas.",
     searchPlaceholder: "Buscar ingrediente...",
     saveAll: "Guardar Globales",
     noIngredients: "No se encontraron ingredientes.",
+    
     // Summary
     summaryTitle: "Finanzas Globales",
     summarySubtitle: "Estadísticas de todo tu negocio.",
@@ -59,8 +86,9 @@ export const TRANSLATIONS = {
     estRevenue: "Ingresos Est.",
     netProfit: "Ganancia Neta Potencial",
     profitHint: "Si vendes 1 unidad de cada receta",
-    costDistribution: "Distribución de Costos",
+    costDistribution: "Distribuição de Costos",
     noData: "No hay datos de costos",
+    
     // Shopping
     shoppingTitle: "Lista de Compras",
     shoppingSubtitle: "Calcula insumos según tu producción.",
@@ -74,6 +102,7 @@ export const TRANSLATIONS = {
     exportList: "Exportar Lista (DOC)",
     shareWhatsapp: "Compartir WhatsApp",
     clearList: "Limpiar Lista",
+    
     // Nav
     navHome: "Inicio",
     navCosts: "Costos",
@@ -81,8 +110,9 @@ export const TRANSLATIONS = {
     navShopping: "Compras",
     navHomeInfo: "Gestión de Recetas",
     navCostsInfo: "Precios de Insumos",
-    navSummaryInfo: "Estatísticas Globales",
+    navSummaryInfo: "Estadísticas Globales",
     navShoppingInfo: "Generar Lista de Compras",
+    
     // Actions
     downloadBackup: "Descargar Base de Datos",
     uploadBackup: "Cargar Respaldo",
@@ -93,13 +123,14 @@ export const TRANSLATIONS = {
   },
   EN: {
     appTitle: "HorneFin",
-    appSubtitle: "Manage your bakery",
+    logoSubtitle: "Bakery Management",
     manual: "Manual",
     file: "TXT",
     recipeName: "Recipe Name",
     ingredient: "Ingredient",
     qty: "Qty",
     add: "+ Add",
+    update: "Update",
     saveRecipe: "Save Recipe",
     updateRecipe: "Update Recipe",
     uploadFile: "Upload .txt File",
@@ -111,6 +142,14 @@ export const TRANSLATIONS = {
     edit: "Edit",
     delete: "Delete",
     confirmDelete: "Are you sure you want to delete this recipe?",
+    editingRecipe: "Editing Recipe",
+    cancel: "Cancel",
+    flexibleFormats: "Supports flexible formats:",
+    noIngredientsDetected: "Could not detect ingredients.",
+    confirmDeleteIngredient: "Are you sure you want to delete this ingredient?",
+    globalPricesUpdated: "Global prices updated",
+    recipeAlreadyInList: "This recipe is already in the list",
+
     // Cost Analysis
     updatePrices: "Configure Prices",
     pricesInfo: "Update ingredient costs and add extra expenses.",
@@ -132,16 +171,34 @@ export const TRANSLATIONS = {
     costBreakdown: "Cost Breakdown",
     basedOn: "Based on Total Recipe",
     totalMaterials: "Total Materials",
-    otherExpenses: "Other Expenses (Gas, Packaging)",
-    otherExpensesHint: "Fixed amount for this recipe",
+    otherExpenses: "Other Expenses",
+    otherExpensesHint: "Fixed amount for this recipe (Gas, etc.)",
     noPrice: "No Price",
     printPdf: "Export Report",
+
+    // Reports
+    reportTitle: "Report",
+    reportDate: "Date",
+    reportMode: "Mode",
+    reportFinancialSummary: "Financial Summary",
+    reportProductionCost: "Production Cost",
+    reportSuggestedPrice: "Suggested Price",
+    reportEstProfit: "Estimated Profit",
+    reportCostBreakdown: "Cost Breakdown",
+    reportIngredient: "Ingredient",
+    reportQty: "Quantity",
+    reportCost: "Cost",
+    reportTotalRecipe: "Total Recipe Cost",
+    reportGeneratedBy: "Generated with HorneFin App",
+    reportMargin: "Margin",
+
     // Pantry
     pantryTitle: "Global Costs",
     pantrySubtitle: "Ingredient prices applicable to all recipes.",
     searchPlaceholder: "Search ingredient...",
     saveAll: "Save Global",
     noIngredients: "No ingredients found.",
+
     // Summary
     summaryTitle: "Global Finances",
     summarySubtitle: "Statistics for your entire business.",
@@ -151,6 +208,7 @@ export const TRANSLATIONS = {
     profitHint: "If you sell 1 unit of each recipe",
     costDistribution: "Cost Distribution",
     noData: "No cost data",
+
     // Shopping
     shoppingTitle: "Shopping List",
     shoppingSubtitle: "Calculate ingredients based on production.",
@@ -164,6 +222,7 @@ export const TRANSLATIONS = {
     exportList: "Export List (DOC)",
     shareWhatsapp: "Share WhatsApp",
     clearList: "Clear List",
+
     // Nav
     navHome: "Home",
     navCosts: "Costs",
@@ -173,6 +232,7 @@ export const TRANSLATIONS = {
     navCostsInfo: "Ingredient Prices",
     navSummaryInfo: "Global Stats",
     navShoppingInfo: "Generate Shopping List",
+
     // Actions
     downloadBackup: "Download Database",
     uploadBackup: "Upload Backup",
@@ -183,13 +243,14 @@ export const TRANSLATIONS = {
   },
   PT: {
     appTitle: "HorneFin",
-    appSubtitle: "Gerencie sua confeitaria",
+    logoSubtitle: "Gestão de Confeitaria",
     manual: "Manual",
     file: "TXT",
     recipeName: "Nome da Receita",
     ingredient: "Ingrediente",
     qty: "Qtd.",
     add: "+ Adicionar",
+    update: "Atualizar",
     saveRecipe: "Salvar Receita",
     updateRecipe: "Atualizar Receita",
     uploadFile: "Enviar arquivo .txt",
@@ -201,6 +262,14 @@ export const TRANSLATIONS = {
     edit: "Editar",
     delete: "Excluir",
     confirmDelete: "Tem certeza que deseja excluir esta receita?",
+    editingRecipe: "Editando Receita",
+    cancel: "Cancelar",
+    flexibleFormats: "Suporta formatos flexíveis:",
+    noIngredientsDetected: "Não foi possível detectar ingredientes.",
+    confirmDeleteIngredient: "Tem certeza que deseja excluir este ingrediente?",
+    globalPricesUpdated: "Preços globais atualizados",
+    recipeAlreadyInList: "Esta receita já está na lista",
+
     // Cost Analysis
     updatePrices: "Configurar Preços",
     pricesInfo: "Atualize os custos dos ingredientes e adicione despesas extras.",
@@ -222,16 +291,34 @@ export const TRANSLATIONS = {
     costBreakdown: "Detalhamento de Custos",
     basedOn: "Baseado na Receita Total",
     totalMaterials: "Total Materiais",
-    otherExpenses: "Outras Despesas (Gás, Embalagem)",
-    otherExpensesHint: "Valor fixo para esta receita",
+    otherExpenses: "Outras Despesas",
+    otherExpensesHint: "Valor fixo para esta receita (Gás, etc.)",
     noPrice: "Sem Preço",
     printPdf: "Exportar Relatório",
+
+    // Reports
+    reportTitle: "Relatório",
+    reportDate: "Data",
+    reportMode: "Modo",
+    reportFinancialSummary: "Resumo Financeiro",
+    reportProductionCost: "Custo Produção",
+    reportSuggestedPrice: "Preço Sugerido",
+    reportEstProfit: "Lucro Estimado",
+    reportCostBreakdown: "Detalhamento de Custos",
+    reportIngredient: "Ingrediente",
+    reportQty: "Quantidade",
+    reportCost: "Custo",
+    reportTotalRecipe: "Custo Total Receita",
+    reportGeneratedBy: "Gerado com HorneFin App",
+    reportMargin: "Margem",
+
     // Pantry
     pantryTitle: "Custos Globais",
     pantrySubtitle: "Preços de ingredientes aplicáveis a todas as receitas.",
     searchPlaceholder: "Buscar ingrediente...",
     saveAll: "Salvar Globais",
     noIngredients: "Nenhum ingrediente encontrado.",
+
     // Summary
     summaryTitle: "Finanças Globais",
     summarySubtitle: "Estatísticas de todo o seu negócio.",
@@ -241,6 +328,7 @@ export const TRANSLATIONS = {
     profitHint: "Se você vender 1 unidade de cada receita",
     costDistribution: "Distribuição de Custos",
     noData: "Sem dados de custo",
+
     // Shopping
     shoppingTitle: "Lista de Compras",
     shoppingSubtitle: "Calcule insumos com base na produção.",
@@ -254,6 +342,7 @@ export const TRANSLATIONS = {
     exportList: "Exportar Lista (DOC)",
     shareWhatsapp: "Compartilhar WhatsApp",
     clearList: "Limpar Lista",
+
     // Nav
     navHome: "Início",
     navCosts: "Custos",
@@ -263,6 +352,7 @@ export const TRANSLATIONS = {
     navCostsInfo: "Preços de Insumos",
     navSummaryInfo: "Estatísticas Globais",
     navShoppingInfo: "Gerar Lista de Compras",
+
     // Actions
     downloadBackup: "Baixar Banco de Dados",
     uploadBackup: "Carregar Backup",

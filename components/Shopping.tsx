@@ -31,7 +31,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
       if (!selectedRecipeId) return;
       // Check if already added
       if (selectedRecipes.find(r => r.recipeId === selectedRecipeId)) {
-          alert('Esta receta ya está en la lista');
+          alert(t.recipeAlreadyInList);
           return;
       }
       // Inicializamos en 0 para que el input salga vacío (placeholder)
@@ -113,7 +113,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
       <head>
         <meta charset="utf-8">
-        <title>Lista de Compras</title>
+        <title>${t.shoppingTitle}</title>
         <style>
           body { font-family: 'Arial', sans-serif; padding: 20px; }
           h1 { color: #D98E28; }
@@ -124,10 +124,10 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
         </style>
       </head>
       <body>
-        <h1>Lista de Compras - HorneFin</h1>
-        <p><strong>Fecha:</strong> ${date}</p>
+        <h1>${t.shoppingTitle} - HorneFin</h1>
+        <p><strong>${t.reportDate}:</strong> ${date}</p>
         
-        <h3>Recetas Seleccionadas:</h3>
+        <h3>${t.selectRecipe}:</h3>
         <ul>
             ${selectedRecipes.map(s => {
                 const r = recipes.find(x => x.id === s.recipeId);
@@ -138,11 +138,11 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
         <table>
           <thead>
             <tr>
-              <th>Ingrediente</th>
-              <th>Necesario</th>
-              <th>En Stock</th>
-              <th>A Comprar</th>
-              <th>Costo Est.</th>
+              <th>${t.reportIngredient}</th>
+              <th>${t.need}</th>
+              <th>${t.inStock}</th>
+              <th>${t.need}</th>
+              <th>${t.estCost}</th>
             </tr>
           </thead>
           <tbody>
@@ -176,7 +176,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
   };
 
   const handleWhatsApp = () => {
-      let text = `*Lista de Compras HorneFin - ${new Date().toLocaleDateString()}*\n\n`;
+      let text = `*${t.shoppingTitle} HorneFin - ${new Date().toLocaleDateString()}*\n\n`;
       text += `*Recetas:*\n`;
       selectedRecipes.forEach(s => {
           const r = recipes.find(x => x.id === s.recipeId);
@@ -217,7 +217,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
                    value={selectedRecipeId}
                    onChange={(e) => setSelectedRecipeId(e.target.value)}
                  >
-                     <option value="">-- Seleccionar --</option>
+                     <option value="">-- {t.selectRecipe} --</option>
                      {recipes.map(r => (
                          <option key={r.id} value={r.id}>{r.name}</option>
                      ))}
