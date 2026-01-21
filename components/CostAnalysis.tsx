@@ -30,7 +30,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
   useEffect(() => {
     const missingPrices = recipe.ingredients.some(ing => !pantry[ing.name.toLowerCase()]);
     if (missingPrices) {
-      // Initialize form with existing values or defaults
       const initialForm: Record<string, PantryItem> = {};
       recipe.ingredients.forEach(ing => {
         const key = ing.name.toLowerCase();
@@ -38,13 +37,29 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
           name: ing.name,
           price: 0,
           quantity: 1,
-          unit: 'kg' // Default purchase unit
+          unit: 'kg'
         };
       });
       setPantryFormValues(initialForm);
       setShowPantryForm(true);
     }
   }, [recipe, pantry]);
+
+  // If user opens manual edit, ensure all ingredients are in the form even if they have prices
+  const openPriceEditor = () => {
+    const initialForm: Record<string, PantryItem> = {};
+    recipe.ingredients.forEach(ing => {
+      const key = ing.name.toLowerCase();
+      initialForm[key] = pantry[key] || {
+        name: ing.name,
+        price: 0,
+        quantity: 1,
+        unit: 'kg'
+      };
+    });
+    setPantryFormValues(initialForm);
+    setShowPantryForm(true);
+  };
 
   const handlePantrySubmit = () => {
     onUpdatePantry(Object.values(pantryFormValues));
@@ -67,7 +82,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
      setIsEditingName(false);
   };
 
-  // Calculations
   const calculations = useMemo(() => {
     let totalRecipeCost = 0;
     const ingredientBreakdown = recipe.ingredients.map(ing => {
@@ -84,7 +98,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
     const costPerItem = mode === 'SINGLE' ? totalRecipeCost : (totalRecipeCost / batchSize);
     const suggestedPrice = costPerItem / (1 - (desiredMargin / 100));
     
-    // Projections
     const itemsSold = mode === 'SINGLE' ? 1 : batchSize * batchesPerDay;
     const totalDailyRevenue = suggestedPrice * itemsSold;
     const totalDailyCost = (mode === 'SINGLE' ? totalRecipeCost : totalRecipeCost * batchesPerDay);
@@ -157,7 +170,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
             </div>
           ))}
         </div>
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 z-50">
           <button 
             onClick={handlePantrySubmit}
             className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition"
@@ -170,7 +183,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-safe transition-colors duration-300">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
       {/* Header */}
       <div className="bg-white dark:bg-stone-900 p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between border-b border-stone-100 dark:border-stone-800">
         <button onClick={onBack} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition">
@@ -194,10 +207,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
               {recipe.name} <Icons.Edit size={14} className="text-stone-300 dark:text-stone-600" />
            </h1>
         )}
-
-        <button onClick={() => setShowPantryForm(true)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full text-rose-500 transition">
-           <Icons.Money size={20} />
-        </button>
+        
+        <div className="w-10"></div> {/* Spacer for symmetry */}
       </div>
 
       <div className="p-4 space-y-6">
@@ -318,6 +329,15 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
               </div>
            </div>
         </div>
+        
+        {/* Edit Prices Button */}
+        <button 
+           onClick={openPriceEditor}
+           className="w-full py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white border-2 border-stone-100 dark:border-stone-700 rounded-2xl font-bold shadow-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center justify-center gap-2"
+        >
+           <Icons.Money size={20} className="text-amber-500" />
+           {t.editPrices}
+        </button>
 
       </div>
     </div>

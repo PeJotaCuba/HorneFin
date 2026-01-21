@@ -51,7 +51,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   const COLORS = ['#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#64748B'];
 
   return (
-    <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
+    <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
            <span className="bg-purple-500 text-white p-1.5 rounded-lg">

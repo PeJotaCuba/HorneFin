@@ -39,13 +39,13 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
 
   const handleSaveAll = () => {
     onUpdatePantry(items);
-    alert('Precios actualizados / Prices updated');
+    alert('Precios actualizados');
   };
 
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
+    <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-amber-400 text-white p-1.5 rounded-lg">
@@ -129,7 +129,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
         )}
       </div>
 
-      <div className="fixed bottom-[85px] left-0 right-0 px-4">
+      <div className="fixed bottom-[90px] left-0 right-0 px-4 z-30">
          <button 
            onClick={handleSaveAll}
            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-black dark:hover:bg-stone-200 transition-colors"

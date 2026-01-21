@@ -14,10 +14,8 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState<Language>('ES');
   
-  // Global Pantry: Stores prices for normalized ingredient names
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
 
-  // Handle Dark Mode Class
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -38,7 +36,18 @@ export default function App() {
   const handleUpdateRecipe = (updatedRecipe: Recipe) => {
     const updatedRecipes = recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
     setRecipes(updatedRecipes);
-    setSelectedRecipe(updatedRecipe); // Update current view data
+    if (selectedRecipe && selectedRecipe.id === updatedRecipe.id) {
+       setSelectedRecipe(updatedRecipe);
+    }
+  };
+
+  const handleDeleteRecipe = (id: string) => {
+    const updatedRecipes = recipes.filter(r => r.id !== id);
+    setRecipes(updatedRecipes);
+    if (selectedRecipe && selectedRecipe.id === id) {
+      setSelectedRecipe(null);
+      setCurrentView(AppView.DASHBOARD);
+    }
   };
 
   const handleUpdatePantry = (items: PantryItem[]) => {
@@ -70,56 +79,60 @@ export default function App() {
 
   return (
     <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-stone-50'}`}>
-      {currentView === AppView.DASHBOARD && (
-        <Dashboard 
-          recipes={recipes} 
-          onAddRecipe={handleAddRecipe}
-          onSelectRecipe={handleSelectRecipe}
-          darkMode={darkMode}
-          toggleDarkMode={() => setDarkMode(!darkMode)}
-          onDownloadBackup={handleDownloadBackup}
-          language={language}
-          setLanguage={setLanguage}
-          t={t}
-        />
-      )}
+      
+      {/* Views Container - Add padding bottom so navbar doesn't cover content */}
+      <div className="h-full">
+        {currentView === AppView.DASHBOARD && (
+          <Dashboard 
+            recipes={recipes} 
+            onAddRecipe={handleAddRecipe}
+            onUpdateRecipe={handleUpdateRecipe}
+            onDeleteRecipe={handleDeleteRecipe}
+            onSelectRecipe={handleSelectRecipe}
+            darkMode={darkMode}
+            toggleDarkMode={() => setDarkMode(!darkMode)}
+            onDownloadBackup={handleDownloadBackup}
+            language={language}
+            setLanguage={setLanguage}
+            t={t}
+          />
+        )}
 
-      {currentView === AppView.PANTRY && (
-        <Pantry 
-          recipes={recipes} 
-          pantry={pantry} 
-          onUpdatePantry={handleUpdatePantry} 
-          t={t}
-        />
-      )}
+        {currentView === AppView.PANTRY && (
+          <Pantry 
+            recipes={recipes} 
+            pantry={pantry} 
+            onUpdatePantry={handleUpdatePantry} 
+            t={t}
+          />
+        )}
 
-      {currentView === AppView.SUMMARY && (
-        <Summary 
-           recipes={recipes} 
-           pantry={pantry} 
-           t={t}
-        />
-      )}
+        {currentView === AppView.SUMMARY && (
+          <Summary 
+             recipes={recipes} 
+             pantry={pantry} 
+             t={t}
+          />
+        )}
 
-      {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
-        <CostAnalysis 
-          recipe={selectedRecipe}
-          pantry={pantry}
-          onUpdatePantry={handleUpdatePantry}
-          onUpdateRecipe={handleUpdateRecipe}
-          onBack={() => setCurrentView(AppView.DASHBOARD)}
-          t={t}
-        />
-      )}
+        {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
+          <CostAnalysis 
+            recipe={selectedRecipe}
+            pantry={pantry}
+            onUpdatePantry={handleUpdatePantry}
+            onUpdateRecipe={handleUpdateRecipe}
+            onBack={() => setCurrentView(AppView.DASHBOARD)}
+            t={t}
+          />
+        )}
+      </div>
 
-      {/* Show NavBar on main tabs only */}
-      {(currentView === AppView.DASHBOARD || currentView === AppView.PANTRY || currentView === AppView.SUMMARY) && (
-        <NavBar 
-          currentView={currentView} 
-          onChangeView={setCurrentView} 
-          t={t}
-        />
-      )}
+      {/* Persistent NavBar */}
+      <NavBar 
+        currentView={currentView} 
+        onChangeView={setCurrentView} 
+        t={t}
+      />
     </div>
   );
 }
