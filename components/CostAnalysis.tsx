@@ -9,9 +9,10 @@ interface CostAnalysisProps {
   onUpdatePantry: (items: PantryItem[]) => void;
   onUpdateRecipe: (recipe: Recipe) => void;
   onBack: () => void;
+  t: any;
 }
 
-export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUpdatePantry, onUpdateRecipe, onBack }) => {
+export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUpdatePantry, onUpdateRecipe, onBack, t }) => {
   const [showPantryForm, setShowPantryForm] = useState(false);
   const [mode, setMode] = useState<'SINGLE' | 'BATCH'>('SINGLE');
   const [isEditingName, setIsEditingName] = useState(false);
@@ -102,13 +103,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
     return (
       <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-20">
         <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
-          <h2 className="text-lg font-bold text-stone-800 dark:text-white">Actualizar Precios</h2>
+          <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
              <Icons.Close />
           </button>
         </div>
         <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 border-b border-amber-100 dark:border-amber-900/50">
-          <p>La aplicación normalizará las unidades automáticamente. Ingresa el precio tal cual lo compras.</p>
+          <p>{t.pricesInfo}</p>
         </div>
         <div className="p-4 space-y-4">
           {Object.values(pantryFormValues).map((item: PantryItem, idx) => (
@@ -116,7 +117,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
               <p className="font-bold text-lg capitalize mb-3 text-stone-800 dark:text-stone-200">{item.name}</p>
               <div className="flex gap-2">
                 <div className="flex-1">
-                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Precio Compra</label>
+                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.purchasePrice}</label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-stone-400">$</span>
                     <input 
@@ -128,7 +129,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                   </div>
                 </div>
                 <div className="w-20">
-                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Cant.</label>
+                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
                    <input 
                       type="number" 
                       className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
@@ -137,7 +138,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                     />
                 </div>
                 <div className="w-24">
-                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Unidad</label>
+                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
                    <select 
                       className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-rose-500 focus:outline-none"
                       value={item.unit}
@@ -161,7 +162,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
             onClick={handlePantrySubmit}
             className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition"
           >
-            Guardar Precios
+            {t.savePrices}
           </button>
         </div>
       </div>
@@ -207,13 +208,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
             onClick={() => setMode('SINGLE')}
             className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'SINGLE' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
           >
-            Individual
+            {t.single}
           </button>
           <button 
             onClick={() => setMode('BATCH')}
             className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'BATCH' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
           >
-            Por Lote (Batch)
+            {t.batch}
           </button>
         </div>
 
@@ -221,7 +222,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
         {mode === 'BATCH' && (
           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 space-y-3">
              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">Unidades por Lote</span>
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchSize}</span>
                 <input 
                   type="number" 
                   value={batchSize} 
@@ -230,7 +231,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                 />
              </div>
              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">Lotes por Día</span>
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchesDay}</span>
                 <input 
                   type="number" 
                   value={batchesPerDay} 
@@ -247,7 +248,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
            <div className="relative z-10">
              <div className="flex justify-between items-start mb-6">
                 <div>
-                   <p className="text-stone-400 text-xs font-bold uppercase tracking-wider mb-1">Costo {mode === 'SINGLE' ? 'Receta' : 'Por Unidad'}</p>
+                   <p className="text-stone-400 text-xs font-bold uppercase tracking-wider mb-1">{t.costRecipe} {mode === 'SINGLE' ? '' : t.costItem}</p>
                    <p className="text-3xl font-bold text-white">€{calculations.costPerItem.toFixed(2)}</p>
                 </div>
                 <div className="bg-stone-800 dark:bg-stone-700 p-2 rounded-lg">
@@ -258,7 +259,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
              <div className="space-y-4">
                 <div>
                    <div className="flex justify-between mb-1">
-                     <label className="text-xs font-bold text-stone-400 uppercase">Margen Deseado</label>
+                     <label className="text-xs font-bold text-stone-400 uppercase">{t.desiredMargin}</label>
                      <span className="text-xs font-bold text-rose-400">{desiredMargin}%</span>
                    </div>
                    <input 
@@ -273,19 +274,18 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                 
                 <div className="bg-stone-800/50 dark:bg-stone-900/50 rounded-xl p-4 border border-stone-700 dark:border-stone-600">
                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium text-stone-300">Precio Sugerido</span>
+                      <span className="text-sm font-medium text-stone-300">{t.suggestedPrice}</span>
                       <span className="text-2xl font-bold text-green-400">€{calculations.suggestedPrice.toFixed(2)}</span>
                    </div>
-                   <p className="text-[10px] text-stone-500 text-right">Para obtener {desiredMargin}% de ganancia</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                    <div>
-                      <p className="text-[10px] uppercase text-stone-500 font-bold">Ganancia {mode === 'BATCH' ? 'Diaria' : ''}</p>
+                      <p className="text-[10px] uppercase text-stone-500 font-bold">{t.profit} {mode === 'BATCH' ? t.daily : ''}</p>
                       <p className="text-lg font-bold text-rose-300">€{calculations.dailyProfit.toFixed(2)}</p>
                    </div>
                    <div className="text-right">
-                       <p className="text-[10px] uppercase text-stone-500 font-bold">Ingreso Total</p>
+                       <p className="text-[10px] uppercase text-stone-500 font-bold">{t.totalRevenue}</p>
                        <p className="text-lg font-bold text-white">€{(calculations.suggestedPrice * (mode === 'SINGLE' ? 1 : batchSize * batchesPerDay)).toFixed(2)}</p>
                    </div>
                 </div>
@@ -296,8 +296,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
         {/* Breakdown */}
         <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden">
            <div className="p-4 bg-stone-50 dark:bg-stone-800/50 border-b border-stone-100 dark:border-stone-800 font-bold text-stone-700 dark:text-stone-300 flex justify-between">
-              <span>Desglose de Costos</span>
-              <span className="text-xs font-normal text-stone-400 self-center">Basado en Receta Total</span>
+              <span>{t.costBreakdown}</span>
+              <span className="text-xs font-normal text-stone-400 self-center">{t.basedOn}</span>
            </div>
            <div className="divide-y divide-stone-50 dark:divide-stone-800">
               {calculations.ingredientBreakdown.map((item, i) => (
@@ -308,12 +308,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUp
                    </div>
                    <div className="text-right">
                       <p className="font-bold text-stone-900 dark:text-white">€{item.cost.toFixed(2)}</p>
-                      {item.cost === 0 && <span className="text-[10px] text-red-400 font-bold">Sin Precio</span>}
+                      {item.cost === 0 && <span className="text-[10px] text-red-400 font-bold">{t.noPrice}</span>}
                    </div>
                 </div>
               ))}
               <div className="p-4 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center font-bold text-stone-800 dark:text-white">
-                 <span>Total Materiales</span>
+                 <span>{t.totalMaterials}</span>
                  <span>€{calculations.totalRecipeCost.toFixed(2)}</span>
               </div>
            </div>

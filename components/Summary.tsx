@@ -7,9 +7,10 @@ import { calculateIngredientCost } from '../utils/units';
 interface SummaryProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
+  t: any;
 }
 
-export const Summary: React.FC<SummaryProps> = ({ recipes, pantry }) => {
+export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   // Calculate aggregate stats
   let totalRevenue = 0;
   let totalCosts = 0;
@@ -56,9 +57,9 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry }) => {
            <span className="bg-purple-500 text-white p-1.5 rounded-lg">
              <Icons.PieChart size={20} />
            </span>
-           Resumen Financiero
+           {t.summaryTitle}
         </h1>
-        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">Estimación basada en tus recetas guardadas.</p>
+        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
       </div>
 
       <div className="p-4 space-y-6">
@@ -66,26 +67,26 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry }) => {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1">Costos Totales</p>
+              <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.totalCosts}</p>
               <p className="text-xl font-bold text-stone-800 dark:text-stone-200">€{totalCosts.toFixed(2)}</p>
            </div>
            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1">Ingresos Est.</p>
+              <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.estRevenue}</p>
               <p className="text-xl font-bold text-green-600 dark:text-green-500">€{totalRevenue.toFixed(2)}</p>
            </div>
            <div className="col-span-2 bg-rose-500 p-5 rounded-2xl text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20">
               <div className="flex justify-between items-center mb-2">
-                 <p className="text-rose-100 font-bold text-sm uppercase">Ganancia Neta Potencial</p>
+                 <p className="text-rose-100 font-bold text-sm uppercase">{t.netProfit}</p>
                  <Icons.Up size={20} className="text-rose-200" />
               </div>
               <p className="text-3xl font-bold">€{totalProfit.toFixed(2)}</p>
-              <p className="text-xs text-rose-100 mt-1 opacity-80">Si vendes 1 unidad de cada receta</p>
+              <p className="text-xs text-rose-100 mt-1 opacity-80">{t.profitHint}</p>
            </div>
         </div>
 
         {/* Chart */}
         <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-           <h3 className="font-bold text-stone-800 dark:text-white mb-4 text-sm uppercase tracking-wide">Distribución de Costos</h3>
+           <h3 className="font-bold text-stone-800 dark:text-white mb-4 text-sm uppercase tracking-wide">{t.costDistribution}</h3>
            
            {pieData.length > 0 ? (
              <div className="h-64 w-full">
@@ -115,7 +116,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry }) => {
              </div>
            ) : (
              <div className="h-40 flex items-center justify-center text-stone-300 dark:text-stone-600">
-               No hay datos de costos
+               {t.noData}
              </div>
            )}
            

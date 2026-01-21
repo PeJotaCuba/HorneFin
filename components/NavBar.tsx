@@ -5,15 +5,16 @@ import { AppView } from '../types';
 interface NavBarProps {
   currentView: AppView;
   onChangeView: (view: AppView) => void;
+  t: any;
 }
 
-export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView }) => {
+export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView, t }) => {
   const [hoveredItem, setHoveredItem] = useState<AppView | null>(null);
 
   const navItems = [
-    { id: AppView.DASHBOARD, icon: Icons.Home, label: 'Inicio', info: 'Gestión de Recetas' },
-    { id: AppView.PANTRY, icon: Icons.Money, label: 'Costos', info: 'Precios de Insumos' },
-    { id: AppView.SUMMARY, icon: Icons.PieChart, label: 'Resumen', info: 'Estadísticas Globales' },
+    { id: AppView.DASHBOARD, icon: Icons.Home, label: t.navHome, info: t.navHomeInfo },
+    { id: AppView.PANTRY, icon: Icons.Money, label: t.navCosts, info: t.navCostsInfo },
+    { id: AppView.SUMMARY, icon: Icons.PieChart, label: t.navSummary, info: t.navSummaryInfo },
   ];
 
   return (

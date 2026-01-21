@@ -26,7 +26,8 @@ import {
   Search,
   Moon,
   Sun,
-  Download
+  Download,
+  Globe
 } from 'lucide-react';
 
 export const Icons = {
@@ -56,5 +57,6 @@ export const Icons = {
   Search,
   Moon,
   Sun,
-  Download
+  Download,
+  Globe
 };

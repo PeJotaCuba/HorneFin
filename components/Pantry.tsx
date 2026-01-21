@@ -6,9 +6,10 @@ interface PantryProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
   onUpdatePantry: (items: PantryItem[]) => void;
+  t: any;
 }
 
-export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry }) => {
+export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry, t }) => {
   const [items, setItems] = useState<PantryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -38,7 +39,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
 
   const handleSaveAll = () => {
     onUpdatePantry(items);
-    alert('Precios actualizados correctamente');
+    alert('Precios actualizados / Prices updated');
   };
 
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -50,15 +51,15 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
           <span className="bg-amber-400 text-white p-1.5 rounded-lg">
              <Icons.Money size={20} />
           </span>
-          Costos de Insumos
+          {t.pantryTitle}
         </h1>
-        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">Define precios de compra para tus ingredientes.</p>
+        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.pantrySubtitle}</p>
         
         <div className="mt-4 relative">
           <Icons.Search className="absolute left-3 top-2.5 text-stone-400" size={16} />
           <input 
             type="text" 
-            placeholder="Buscar ingrediente..." 
+            placeholder={t.searchPlaceholder}
             className="w-full pl-9 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:border-amber-400 text-stone-900 dark:text-white placeholder-stone-400"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
@@ -74,13 +75,13 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
                {item.price > 0 ? (
                  <Icons.Check size={16} className="text-green-500" />
                ) : (
-                 <span className="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-500 px-2 py-0.5 rounded-full uppercase">Sin precio</span>
+                 <span className="text-[10px] bg-red-100 dark:bg-red-900/30 text-red-500 px-2 py-0.5 rounded-full uppercase">{t.noPrice}</span>
                )}
             </h3>
             
             <div className="flex gap-2">
               <div className="flex-1">
-                <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Costo Compra</label>
+                <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.purchasePrice}</label>
                 <div className="relative">
                   <span className="absolute left-3 top-2.5 text-stone-400 font-bold">$</span>
                   <input 
@@ -93,7 +94,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
                 </div>
               </div>
               <div className="w-20">
-                 <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Cant.</label>
+                 <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
                  <input 
                     type="number" 
                     className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-400 focus:outline-none dark:text-white"
@@ -102,7 +103,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
                   />
               </div>
               <div className="w-24">
-                 <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Unidad</label>
+                 <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.unit}</label>
                  <select 
                     className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm bg-white dark:text-white focus:border-amber-400 focus:outline-none"
                     value={item.unit}
@@ -123,7 +124,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
         
         {filteredItems.length === 0 && (
           <div className="text-center py-10 text-stone-400 dark:text-stone-500">
-            <p>No se encontraron ingredientes.</p>
+            <p>{t.noIngredients}</p>
           </div>
         )}
       </div>
@@ -134,7 +135,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry 
            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-black dark:hover:bg-stone-200 transition-colors"
          >
            <Icons.Save size={18} />
-           Guardar Todos los Precios
+           {t.saveAll}
          </button>
       </div>
     </div>

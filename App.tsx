@@ -5,12 +5,14 @@ import { CostAnalysis } from './components/CostAnalysis';
 import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
 import { NavBar } from './components/NavBar';
+import { TRANSLATIONS, Language } from './utils/translations';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [darkMode, setDarkMode] = useState(false);
+  const [language, setLanguage] = useState<Language>('ES');
   
   // Global Pantry: Stores prices for normalized ingredient names
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
@@ -64,6 +66,8 @@ export default function App() {
     document.body.removeChild(a);
   };
 
+  const t = TRANSLATIONS[language];
+
   return (
     <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-stone-50'}`}>
       {currentView === AppView.DASHBOARD && (
@@ -74,6 +78,9 @@ export default function App() {
           darkMode={darkMode}
           toggleDarkMode={() => setDarkMode(!darkMode)}
           onDownloadBackup={handleDownloadBackup}
+          language={language}
+          setLanguage={setLanguage}
+          t={t}
         />
       )}
 
@@ -82,6 +89,7 @@ export default function App() {
           recipes={recipes} 
           pantry={pantry} 
           onUpdatePantry={handleUpdatePantry} 
+          t={t}
         />
       )}
 
@@ -89,6 +97,7 @@ export default function App() {
         <Summary 
            recipes={recipes} 
            pantry={pantry} 
+           t={t}
         />
       )}
 
@@ -99,12 +108,17 @@ export default function App() {
           onUpdatePantry={handleUpdatePantry}
           onUpdateRecipe={handleUpdateRecipe}
           onBack={() => setCurrentView(AppView.DASHBOARD)}
+          t={t}
         />
       )}
 
       {/* Show NavBar on main tabs only */}
       {(currentView === AppView.DASHBOARD || currentView === AppView.PANTRY || currentView === AppView.SUMMARY) && (
-        <NavBar currentView={currentView} onChangeView={setCurrentView} />
+        <NavBar 
+          currentView={currentView} 
+          onChangeView={setCurrentView} 
+          t={t}
+        />
       )}
     </div>
   );

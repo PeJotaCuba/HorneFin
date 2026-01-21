@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Icons } from './Icons';
 import { Recipe, Ingredient } from '../types';
 import { parseRecipeFromText, parseRecipeFromImage } from '../services/geminiService';
+import { Language } from '../utils/translations';
 
 interface DashboardProps {
   recipes: Recipe[];
@@ -10,6 +11,9 @@ interface DashboardProps {
   darkMode: boolean;
   toggleDarkMode: () => void;
   onDownloadBackup: () => void;
+  language: Language;
+  setLanguage: (lang: Language) => void;
+  t: any;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
@@ -18,10 +22,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddRecipe, 
   darkMode, 
   toggleDarkMode, 
-  onDownloadBackup 
+  onDownloadBackup,
+  language,
+  setLanguage,
+  t
 }) => {
   const [inputMode, setInputMode] = useState<'MANUAL' | 'PHOTO' | 'FILE'>('MANUAL');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Manual Form State
@@ -86,12 +94,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
       };
       onAddRecipe(newRecipe);
     } catch (error) {
-      alert("Error al procesar: " + error);
+      alert("Error: " + error);
     } finally {
       setIsProcessing(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
+
+  const availableLanguages: Language[] = ['ES', 'EN', 'PT'];
 
   return (
     <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
@@ -103,22 +113,47 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span className="bg-rose-500 text-white p-1.5 rounded-lg">
                 <Icons.Chef size={20} />
               </span>
-              HorneFin
+              {t.appTitle}
             </h1>
-            <p className="text-stone-500 dark:text-stone-400 text-xs font-medium ml-9">Gestiona tu repostería</p>
+            <p className="text-stone-500 dark:text-stone-400 text-xs font-medium ml-9">{t.appSubtitle}</p>
           </div>
           <div className="flex gap-2">
+            {/* Language Switcher */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center font-bold text-xs w-9 h-9"
+              >
+                 {language}
+              </button>
+              {showLangMenu && (
+                <div className="absolute top-10 right-0 bg-white dark:bg-stone-800 shadow-xl rounded-xl border border-stone-100 dark:border-stone-700 overflow-hidden w-24 z-50">
+                   {availableLanguages.filter(l => l !== language).map(lang => (
+                     <button
+                       key={lang}
+                       onClick={() => { setLanguage(lang); setShowLangMenu(false); }}
+                       className="w-full text-left px-4 py-2 text-sm font-bold text-stone-600 dark:text-stone-300 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 transition"
+                     >
+                       {lang === 'ES' && 'Español'}
+                       {lang === 'EN' && 'English'}
+                       {lang === 'PT' && 'Português'}
+                     </button>
+                   ))}
+                </div>
+              )}
+            </div>
+
             <button 
               onClick={toggleDarkMode}
               className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
-              title="Modo Oscuro"
+              title={t.darkMode}
             >
                {darkMode ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
             </button>
             <button 
               onClick={onDownloadBackup}
               className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
-              title="Descargar Respaldo"
+              title={t.downloadBackup}
             >
                <Icons.Download size={20} />
             </button>
@@ -135,19 +170,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
               onClick={() => setInputMode('MANUAL')}
               className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'MANUAL' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
-              <Icons.Edit size={14} /> Manual
+              <Icons.Edit size={14} /> {t.manual}
             </button>
             <button 
               onClick={() => setInputMode('PHOTO')}
               className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'PHOTO' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
-              <Icons.Camera size={14} /> Foto
+              <Icons.Camera size={14} /> {t.photo}
             </button>
             <button 
               onClick={() => setInputMode('FILE')}
               className={`flex-1 py-4 text-xs font-bold uppercase tracking-wide flex items-center justify-center gap-2 transition-colors ${inputMode === 'FILE' ? 'bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border-b-2 border-rose-500' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
             >
-              <Icons.File size={14} /> TXT
+              <Icons.File size={14} /> {t.file}
             </button>
           </div>
 
@@ -155,7 +190,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {isProcessing ? (
                <div className="text-center py-8">
                  <div className="w-10 h-10 border-4 border-rose-500 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-                 <p className="text-stone-500 dark:text-stone-400 font-medium">Analizando Receta con IA...</p>
+                 <p className="text-stone-500 dark:text-stone-400 font-medium">{t.analyzing}</p>
                </div>
             ) : (
               <>
@@ -163,7 +198,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <div className="space-y-4">
                     <input 
                       type="text" 
-                      placeholder="Nombre de la Receta" 
+                      placeholder={t.recipeName}
                       className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 font-bold text-stone-800 dark:text-white focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder-stone-400"
                       value={manualName}
                       onChange={(e) => setManualName(e.target.value)}
@@ -173,14 +208,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <div className="flex gap-2">
                         <input 
                           type="text" 
-                          placeholder="Ingrediente" 
+                          placeholder={t.ingredient}
                           className="flex-[2] p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400"
                           value={tempIngName}
                           onChange={(e) => setTempIngName(e.target.value)}
                         />
                         <input 
                           type="number" 
-                          placeholder="Cant." 
+                          placeholder={t.qty}
                           className="flex-1 p-2 rounded-lg border border-stone-200 dark:border-stone-600 text-sm bg-white dark:bg-stone-700 dark:text-white placeholder-stone-400"
                           value={tempIngQty}
                           onChange={(e) => setTempIngQty(e.target.value)}
@@ -204,7 +239,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         disabled={!tempIngName || !tempIngQty}
                         className="w-full py-2 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-lg text-sm font-bold hover:bg-stone-300 dark:hover:bg-stone-600 disabled:opacity-50 transition"
                       >
-                        + Agregar
+                        {t.add}
                       </button>
                     </div>
 
@@ -225,7 +260,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       disabled={!manualName || manualIngredients.length === 0}
                       className="w-full py-3 bg-rose-500 text-white rounded-xl font-bold shadow-lg shadow-rose-200 dark:shadow-none hover:bg-rose-600 disabled:opacity-50 transition-all"
                     >
-                      Guardar Receta
+                      {t.saveRecipe}
                     </button>
                   </div>
                 )}
@@ -243,9 +278,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {inputMode === 'PHOTO' ? <Icons.Camera size={32} /> : <Icons.Upload size={32} />}
                     </div>
                     <p className="font-bold text-stone-700 dark:text-stone-300">
-                      {inputMode === 'PHOTO' ? 'Toma una foto' : 'Sube un archivo .txt'}
+                      {inputMode === 'PHOTO' ? t.takePhoto : t.uploadFile}
                     </p>
-                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">La IA identificará los ingredientes</p>
+                    <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">{t.aiIdentify}</p>
                   </div>
                 )}
               </>
@@ -256,7 +291,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Recipe List */}
         <div>
           <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4 flex items-center gap-2">
-            <Icons.Library size={20} className="text-rose-500" /> Recetas Guardadas
+            <Icons.Library size={20} className="text-rose-500" /> {t.savedRecipes}
           </h2>
           <div className="grid gap-4">
             {recipes.map((recipe) => (
@@ -272,10 +307,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <h3 className="font-bold text-stone-900 dark:text-white truncate text-base">{recipe.name}</h3>
                   <p className="text-sm text-stone-500 dark:text-stone-400 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                    {recipe.ingredients.length} Ingredientes
+                    {recipe.ingredients.length} {t.ingredientsCount}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                     <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-full uppercase tracking-wider">Analizar Costos</span>
+                     <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-full uppercase tracking-wider">{t.analyzeCosts}</span>
                   </div>
                 </div>
                 <div className="text-stone-300 dark:text-stone-600">
@@ -288,8 +323,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="w-16 h-16 bg-stone-50 dark:bg-stone-800 rounded-full flex items-center justify-center mx-auto mb-3 text-stone-300 dark:text-stone-600">
                    <Icons.Chef size={32} />
                 </div>
-                <p className="text-stone-400 dark:text-stone-500 font-medium">Aún no hay recetas</p>
-                <p className="text-stone-300 dark:text-stone-600 text-sm">Agrega una arriba para comenzar</p>
+                <p className="text-stone-400 dark:text-stone-500 font-medium">{t.noRecipes}</p>
+                <p className="text-stone-300 dark:text-stone-600 text-sm">{t.addRecipeHint}</p>
               </div>
             )}
           </div>
