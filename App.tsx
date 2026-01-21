@@ -1,0 +1,111 @@
+import React, { useState, useEffect } from 'react';
+import { AppView, Recipe, PantryItem } from './types';
+import { Dashboard } from './components/Dashboard';
+import { CostAnalysis } from './components/CostAnalysis';
+import { Pantry } from './components/Pantry';
+import { Summary } from './components/Summary';
+import { NavBar } from './components/NavBar';
+
+export default function App() {
+  const [currentView, setCurrentView] = useState<AppView>(AppView.DASHBOARD);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [darkMode, setDarkMode] = useState(false);
+  
+  // Global Pantry: Stores prices for normalized ingredient names
+  const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
+
+  // Handle Dark Mode Class
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  const handleAddRecipe = (newRecipe: Recipe) => {
+    setRecipes([newRecipe, ...recipes]);
+  };
+
+  const handleSelectRecipe = (recipe: Recipe) => {
+    setSelectedRecipe(recipe);
+    setCurrentView(AppView.COST_ANALYSIS);
+  };
+
+  const handleUpdateRecipe = (updatedRecipe: Recipe) => {
+    const updatedRecipes = recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
+    setRecipes(updatedRecipes);
+    setSelectedRecipe(updatedRecipe); // Update current view data
+  };
+
+  const handleUpdatePantry = (items: PantryItem[]) => {
+    const newPantry = { ...pantry };
+    items.forEach(item => {
+      newPantry[item.name.toLowerCase()] = item;
+    });
+    setPantry(newPantry);
+  };
+
+  const handleDownloadBackup = () => {
+    const data = {
+      timestamp: new Date().toISOString(),
+      recipes,
+      pantry
+    };
+    
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `HorneFin_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  return (
+    <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-stone-50'}`}>
+      {currentView === AppView.DASHBOARD && (
+        <Dashboard 
+          recipes={recipes} 
+          onAddRecipe={handleAddRecipe}
+          onSelectRecipe={handleSelectRecipe}
+          darkMode={darkMode}
+          toggleDarkMode={() => setDarkMode(!darkMode)}
+          onDownloadBackup={handleDownloadBackup}
+        />
+      )}
+
+      {currentView === AppView.PANTRY && (
+        <Pantry 
+          recipes={recipes} 
+          pantry={pantry} 
+          onUpdatePantry={handleUpdatePantry} 
+        />
+      )}
+
+      {currentView === AppView.SUMMARY && (
+        <Summary 
+           recipes={recipes} 
+           pantry={pantry} 
+        />
+      )}
+
+      {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
+        <CostAnalysis 
+          recipe={selectedRecipe}
+          pantry={pantry}
+          onUpdatePantry={handleUpdatePantry}
+          onUpdateRecipe={handleUpdateRecipe}
+          onBack={() => setCurrentView(AppView.DASHBOARD)}
+        />
+      )}
+
+      {/* Show NavBar on main tabs only */}
+      {(currentView === AppView.DASHBOARD || currentView === AppView.PANTRY || currentView === AppView.SUMMARY) && (
+        <NavBar currentView={currentView} onChangeView={setCurrentView} />
+      )}
+    </div>
+  );
+}

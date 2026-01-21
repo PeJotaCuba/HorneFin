@@ -1,0 +1,325 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { Icons } from './Icons';
+import { Recipe, PantryItem } from '../types';
+import { calculateIngredientCost } from '../utils/units';
+
+interface CostAnalysisProps {
+  recipe: Recipe;
+  pantry: Record<string, PantryItem>;
+  onUpdatePantry: (items: PantryItem[]) => void;
+  onUpdateRecipe: (recipe: Recipe) => void;
+  onBack: () => void;
+}
+
+export const CostAnalysis: React.FC<CostAnalysisProps> = ({ recipe, pantry, onUpdatePantry, onUpdateRecipe, onBack }) => {
+  const [showPantryForm, setShowPantryForm] = useState(false);
+  const [mode, setMode] = useState<'SINGLE' | 'BATCH'>('SINGLE');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState(recipe.name);
+  
+  // Batch Settings
+  const [batchSize, setBatchSize] = useState(12); // Items per batch
+  const [batchesPerDay, setBatchesPerDay] = useState(1);
+  const [desiredMargin, setDesiredMargin] = useState(45); // %
+  
+  // Staging for Pantry Form
+  const [pantryFormValues, setPantryFormValues] = useState<Record<string, PantryItem>>({});
+
+  // Check if we need to show the form on load (if missing prices)
+  useEffect(() => {
+    const missingPrices = recipe.ingredients.some(ing => !pantry[ing.name.toLowerCase()]);
+    if (missingPrices) {
+      // Initialize form with existing values or defaults
+      const initialForm: Record<string, PantryItem> = {};
+      recipe.ingredients.forEach(ing => {
+        const key = ing.name.toLowerCase();
+        initialForm[key] = pantry[key] || {
+          name: ing.name,
+          price: 0,
+          quantity: 1,
+          unit: 'kg' // Default purchase unit
+        };
+      });
+      setPantryFormValues(initialForm);
+      setShowPantryForm(true);
+    }
+  }, [recipe, pantry]);
+
+  const handlePantrySubmit = () => {
+    onUpdatePantry(Object.values(pantryFormValues));
+    setShowPantryForm(false);
+  };
+
+  const handlePantryChange = (key: string, field: keyof PantryItem, value: any) => {
+    setPantryFormValues(prev => ({
+      ...prev,
+      [key]: { ...prev[key], [field]: value }
+    }));
+  };
+
+  const saveName = () => {
+     if (editedName.trim()) {
+        onUpdateRecipe({ ...recipe, name: editedName });
+     } else {
+        setEditedName(recipe.name); // Revert if empty
+     }
+     setIsEditingName(false);
+  };
+
+  // Calculations
+  const calculations = useMemo(() => {
+    let totalRecipeCost = 0;
+    const ingredientBreakdown = recipe.ingredients.map(ing => {
+      const key = ing.name.toLowerCase();
+      const pantryItem = pantry[key];
+      let cost = 0;
+      if (pantryItem && pantryItem.price > 0) {
+        cost = calculateIngredientCost(ing.quantity, ing.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
+      }
+      totalRecipeCost += cost;
+      return { ...ing, cost };
+    });
+
+    const costPerItem = mode === 'SINGLE' ? totalRecipeCost : (totalRecipeCost / batchSize);
+    const suggestedPrice = costPerItem / (1 - (desiredMargin / 100));
+    
+    // Projections
+    const itemsSold = mode === 'SINGLE' ? 1 : batchSize * batchesPerDay;
+    const totalDailyRevenue = suggestedPrice * itemsSold;
+    const totalDailyCost = (mode === 'SINGLE' ? totalRecipeCost : totalRecipeCost * batchesPerDay);
+    const dailyProfit = totalDailyRevenue - totalDailyCost;
+
+    return {
+      totalRecipeCost,
+      ingredientBreakdown,
+      costPerItem,
+      suggestedPrice,
+      dailyProfit
+    };
+  }, [recipe, pantry, mode, batchSize, batchesPerDay, desiredMargin]);
+
+  if (showPantryForm) {
+    return (
+      <div className="fixed inset-0 bg-stone-50 dark:bg-stone-950 z-50 overflow-y-auto pb-20">
+        <div className="sticky top-0 bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
+          <h2 className="text-lg font-bold text-stone-800 dark:text-white">Actualizar Precios</h2>
+          <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
+             <Icons.Close />
+          </button>
+        </div>
+        <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 border-b border-amber-100 dark:border-amber-900/50">
+          <p>La aplicación normalizará las unidades automáticamente. Ingresa el precio tal cual lo compras.</p>
+        </div>
+        <div className="p-4 space-y-4">
+          {Object.values(pantryFormValues).map((item: PantryItem, idx) => (
+            <div key={idx} className="bg-white dark:bg-stone-900 border border-stone-100 dark:border-stone-800 rounded-xl p-4 shadow-sm">
+              <p className="font-bold text-lg capitalize mb-3 text-stone-800 dark:text-stone-200">{item.name}</p>
+              <div className="flex gap-2">
+                <div className="flex-1">
+                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Precio Compra</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2.5 text-stone-400">$</span>
+                    <input 
+                      type="number" 
+                      className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-rose-500 focus:outline-none"
+                      value={item.price}
+                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'price', parseFloat(e.target.value))}
+                    />
+                  </div>
+                </div>
+                <div className="w-20">
+                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Cant.</label>
+                   <input 
+                      type="number" 
+                      className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
+                      value={item.quantity}
+                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'quantity', parseFloat(e.target.value))}
+                    />
+                </div>
+                <div className="w-24">
+                   <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">Unidad</label>
+                   <select 
+                      className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg bg-white dark:text-white focus:border-rose-500 focus:outline-none"
+                      value={item.unit}
+                      onChange={(e) => handlePantryChange(item.name.toLowerCase(), 'unit', e.target.value)}
+                    >
+                      <option value="kg">kg</option>
+                      <option value="lb">lb</option>
+                      <option value="g">g</option>
+                      <option value="ml">ml</option>
+                      <option value="l">l</option>
+                      <option value="oz">oz</option>
+                      <option value="u">u</option>
+                   </select>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800">
+          <button 
+            onClick={handlePantrySubmit}
+            className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition"
+          >
+            Guardar Precios
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-safe transition-colors duration-300">
+      {/* Header */}
+      <div className="bg-white dark:bg-stone-900 p-4 sticky top-0 z-10 shadow-sm flex items-center justify-between border-b border-stone-100 dark:border-stone-800">
+        <button onClick={onBack} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition">
+           <Icons.Back className="text-stone-600 dark:text-stone-400" />
+        </button>
+        
+        {isEditingName ? (
+           <input 
+              autoFocus
+              className="font-bold text-stone-900 dark:text-white bg-transparent border-b border-rose-500 focus:outline-none text-center flex-1 mx-2"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => e.key === 'Enter' && saveName()}
+           />
+        ) : (
+           <h1 
+              onClick={() => setIsEditingName(true)}
+              className="font-bold text-stone-900 dark:text-white truncate max-w-[200px] cursor-pointer hover:text-rose-500 flex items-center gap-2"
+           >
+              {recipe.name} <Icons.Edit size={14} className="text-stone-300 dark:text-stone-600" />
+           </h1>
+        )}
+
+        <button onClick={() => setShowPantryForm(true)} className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 rounded-full text-rose-500 transition">
+           <Icons.Money size={20} />
+        </button>
+      </div>
+
+      <div className="p-4 space-y-6">
+        
+        {/* Toggle Mode */}
+        <div className="bg-stone-100 dark:bg-stone-900 p-1 rounded-xl flex">
+          <button 
+            onClick={() => setMode('SINGLE')}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'SINGLE' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
+          >
+            Individual
+          </button>
+          <button 
+            onClick={() => setMode('BATCH')}
+            className={`flex-1 py-2 text-sm font-bold rounded-lg transition ${mode === 'BATCH' ? 'bg-white dark:bg-stone-800 text-rose-500 shadow-sm' : 'text-stone-400 dark:text-stone-500'}`}
+          >
+            Por Lote (Batch)
+          </button>
+        </div>
+
+        {/* Configuration for Batch */}
+        {mode === 'BATCH' && (
+          <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 space-y-3">
+             <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">Unidades por Lote</span>
+                <input 
+                  type="number" 
+                  value={batchSize} 
+                  onChange={(e) => setBatchSize(Number(e.target.value))}
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                />
+             </div>
+             <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">Lotes por Día</span>
+                <input 
+                  type="number" 
+                  value={batchesPerDay} 
+                  onChange={(e) => setBatchesPerDay(Number(e.target.value))}
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                />
+             </div>
+          </div>
+        )}
+
+        {/* Main Financial Card */}
+        <div className="bg-stone-900 dark:bg-stone-800 rounded-3xl p-6 text-white shadow-xl shadow-stone-300 dark:shadow-none relative overflow-hidden">
+           <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500 blur-[60px] opacity-20 rounded-full"></div>
+           <div className="relative z-10">
+             <div className="flex justify-between items-start mb-6">
+                <div>
+                   <p className="text-stone-400 text-xs font-bold uppercase tracking-wider mb-1">Costo {mode === 'SINGLE' ? 'Receta' : 'Por Unidad'}</p>
+                   <p className="text-3xl font-bold text-white">€{calculations.costPerItem.toFixed(2)}</p>
+                </div>
+                <div className="bg-stone-800 dark:bg-stone-700 p-2 rounded-lg">
+                   <Icons.Calc className="text-stone-200" />
+                </div>
+             </div>
+
+             <div className="space-y-4">
+                <div>
+                   <div className="flex justify-between mb-1">
+                     <label className="text-xs font-bold text-stone-400 uppercase">Margen Deseado</label>
+                     <span className="text-xs font-bold text-rose-400">{desiredMargin}%</span>
+                   </div>
+                   <input 
+                    type="range" 
+                    min="10" 
+                    max="100" 
+                    value={desiredMargin} 
+                    onChange={(e) => setDesiredMargin(Number(e.target.value))}
+                    className="w-full h-2 bg-stone-700 dark:bg-stone-900 rounded-lg appearance-none cursor-pointer accent-rose-500"
+                   />
+                </div>
+                
+                <div className="bg-stone-800/50 dark:bg-stone-900/50 rounded-xl p-4 border border-stone-700 dark:border-stone-600">
+                   <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium text-stone-300">Precio Sugerido</span>
+                      <span className="text-2xl font-bold text-green-400">€{calculations.suggestedPrice.toFixed(2)}</span>
+                   </div>
+                   <p className="text-[10px] text-stone-500 text-right">Para obtener {desiredMargin}% de ganancia</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 pt-2">
+                   <div>
+                      <p className="text-[10px] uppercase text-stone-500 font-bold">Ganancia {mode === 'BATCH' ? 'Diaria' : ''}</p>
+                      <p className="text-lg font-bold text-rose-300">€{calculations.dailyProfit.toFixed(2)}</p>
+                   </div>
+                   <div className="text-right">
+                       <p className="text-[10px] uppercase text-stone-500 font-bold">Ingreso Total</p>
+                       <p className="text-lg font-bold text-white">€{(calculations.suggestedPrice * (mode === 'SINGLE' ? 1 : batchSize * batchesPerDay)).toFixed(2)}</p>
+                   </div>
+                </div>
+             </div>
+           </div>
+        </div>
+
+        {/* Breakdown */}
+        <div className="bg-white dark:bg-stone-900 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden">
+           <div className="p-4 bg-stone-50 dark:bg-stone-800/50 border-b border-stone-100 dark:border-stone-800 font-bold text-stone-700 dark:text-stone-300 flex justify-between">
+              <span>Desglose de Costos</span>
+              <span className="text-xs font-normal text-stone-400 self-center">Basado en Receta Total</span>
+           </div>
+           <div className="divide-y divide-stone-50 dark:divide-stone-800">
+              {calculations.ingredientBreakdown.map((item, i) => (
+                <div key={i} className="p-4 flex justify-between items-center hover:bg-stone-50 dark:hover:bg-stone-800/50 transition">
+                   <div>
+                      <p className="font-bold text-stone-800 dark:text-stone-200 capitalize">{item.name}</p>
+                      <p className="text-xs text-stone-500 dark:text-stone-400">{item.quantity} {item.unit}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="font-bold text-stone-900 dark:text-white">€{item.cost.toFixed(2)}</p>
+                      {item.cost === 0 && <span className="text-[10px] text-red-400 font-bold">Sin Precio</span>}
+                   </div>
+                </div>
+              ))}
+              <div className="p-4 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center font-bold text-stone-800 dark:text-white">
+                 <span>Total Materiales</span>
+                 <span>€{calculations.totalRecipeCost.toFixed(2)}</span>
+              </div>
+           </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
