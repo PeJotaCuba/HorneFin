@@ -96,10 +96,10 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                   <span className="absolute left-3 top-2.5 text-stone-400 font-bold">$</span>
                   <input 
                     type="number" 
-                    className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-stone-800 dark:text-white focus:border-amber-400 focus:outline-none"
-                    value={item.price}
-                    onChange={(e) => handleUpdateItem(idx, 'price', parseFloat(e.target.value))}
                     placeholder="0.00"
+                    className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-stone-800 dark:text-white focus:border-amber-400 focus:outline-none"
+                    value={item.price === 0 ? '' : item.price}
+                    onChange={(e) => handleUpdateItem(idx, 'price', parseFloat(e.target.value) || 0)}
                   />
                 </div>
               </div>
@@ -108,8 +108,8 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                  <input 
                     type="number" 
                     className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-400 focus:outline-none dark:text-white"
-                    value={item.quantity}
-                    onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value))}
+                    value={item.quantity === 0 ? '' : item.quantity}
+                    onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                   />
               </div>
               <div className="w-24">

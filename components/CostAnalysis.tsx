@@ -171,9 +171,9 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         
         <div class="card">
           <h2>Resumen Financiero</h2>
-          <p><strong>Costo Producción:</strong> €${calculations.costPerItem.toFixed(2)}</p>
-          <p><strong>Precio Sugerido:</strong> €${calculations.suggestedPrice.toFixed(2)} (Margen ${desiredMargin}%)</p>
-          <p><strong>Ganancia Estimada:</strong> €${calculations.dailyProfit.toFixed(2)}</p>
+          <p><strong>Costo Producción:</strong> $${calculations.costPerItem.toFixed(2)}</p>
+          <p><strong>Precio Sugerido:</strong> $${calculations.suggestedPrice.toFixed(2)} (Margen ${desiredMargin}%)</p>
+          <p><strong>Ganancia Estimada:</strong> $${calculations.dailyProfit.toFixed(2)}</p>
         </div>
 
         <h2>Desglose de Costos</h2>
@@ -190,19 +190,19 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
               <tr>
                 <td>${ing.name}</td>
                 <td>${ing.quantity} ${ing.unit}</td>
-                <td>€${ing.cost.toFixed(2)}</td>
+                <td>$${ing.cost.toFixed(2)}</td>
               </tr>
             `).join('')}
             ${calculations.extras > 0 ? `
               <tr>
                 <td>Otros Gastos (Fijo)</td>
                 <td>1</td>
-                <td>€${calculations.extras.toFixed(2)}</td>
+                <td>$${calculations.extras.toFixed(2)}</td>
               </tr>
             ` : ''}
             <tr class="total-row">
               <td colspan="2">Costo Total Receta</td>
-              <td>€${calculations.totalRecipeCost.toFixed(2)}</td>
+              <td>$${calculations.totalRecipeCost.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -253,9 +253,10 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                         <span className="absolute left-3 top-2.5 text-stone-400">$</span>
                         <input 
                           type="number" 
+                          placeholder="0.00"
                           className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold dark:text-white focus:border-rose-500 focus:outline-none"
-                          value={item.price}
-                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'price', parseFloat(e.target.value))}
+                          value={item.price === 0 ? '' : item.price}
+                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'price', parseFloat(e.target.value) || 0)}
                         />
                       </div>
                     </div>
@@ -264,8 +265,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                        <input 
                           type="number" 
                           className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-rose-500 focus:outline-none"
-                          value={item.quantity}
-                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'quantity', parseFloat(e.target.value))}
+                          value={item.quantity === 0 ? '' : item.quantity}
+                          onChange={(e) => handlePantryChange(normalizeKey(item.name), 'quantity', parseFloat(e.target.value) || 0)}
                         />
                     </div>
                     <div className="w-24">
@@ -380,6 +381,36 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           </button>
         </div>
         
+        {/* Print Title Only */}
+        <div className="hidden print:block text-center mb-4">
+            <h1 className="text-2xl font-bold">{recipe.name}</h1>
+            <p className="text-sm text-gray-500">Reporte Financiero - HorneFin</p>
+        </div>
+
+        {/* Configuration for Batch (RESTAURADO) */}
+        {mode === 'BATCH' && (
+          <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 space-y-3 print:border-gray-300">
+             <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchSize}</span>
+                <input 
+                  type="number" 
+                  value={batchSize} 
+                  onChange={(e) => setBatchSize(Number(e.target.value))}
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                />
+             </div>
+             <div className="flex justify-between items-center">
+                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchesDay}</span>
+                <input 
+                  type="number" 
+                  value={batchesPerDay} 
+                  onChange={(e) => setBatchesPerDay(Number(e.target.value))}
+                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
+                />
+             </div>
+          </div>
+        )}
+
         {/* Main Financial Card */}
         <div className="bg-stone-900 dark:bg-stone-800 rounded-3xl p-6 text-white shadow-xl shadow-stone-300 dark:shadow-none relative overflow-hidden print:bg-white print:text-black print:border print:border-black print:shadow-none">
            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500 blur-[60px] opacity-20 rounded-full print:hidden"></div>
@@ -387,7 +418,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
              <div className="flex justify-between items-start mb-6">
                 <div>
                    <p className="text-stone-400 text-xs font-bold uppercase tracking-wider mb-1 print:text-black">{t.costRecipe} {mode === 'SINGLE' ? '' : t.costItem}</p>
-                   <p className="text-3xl font-bold text-white print:text-black">€{calculations.costPerItem.toFixed(2)}</p>
+                   <p className="text-3xl font-bold text-white print:text-black">${calculations.costPerItem.toFixed(2)}</p>
                 </div>
                 <div className="bg-stone-800 dark:bg-stone-700 p-2 rounded-lg no-print">
                    <Icons.Calc className="text-stone-200" />
@@ -413,18 +444,18 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                 <div className="bg-stone-800/50 dark:bg-stone-900/50 rounded-xl p-4 border border-stone-700 dark:border-stone-600 print:bg-gray-100 print:border-gray-300">
                    <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium text-stone-300 print:text-black">{t.suggestedPrice}</span>
-                      <span className="text-2xl font-bold text-green-400 print:text-black">€{calculations.suggestedPrice.toFixed(2)}</span>
+                      <span className="text-2xl font-bold text-green-400 print:text-black">${calculations.suggestedPrice.toFixed(2)}</span>
                    </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-2">
                    <div>
                       <p className="text-[10px] uppercase text-stone-500 font-bold print:text-black">{t.profit} {mode === 'BATCH' ? t.daily : ''}</p>
-                      <p className="text-lg font-bold text-rose-300 print:text-black">€{calculations.dailyProfit.toFixed(2)}</p>
+                      <p className="text-lg font-bold text-rose-300 print:text-black">${calculations.dailyProfit.toFixed(2)}</p>
                    </div>
                    <div className="text-right">
                        <p className="text-[10px] uppercase text-stone-500 font-bold print:text-black">{t.totalRevenue}</p>
-                       <p className="text-lg font-bold text-white print:text-black">€{(calculations.suggestedPrice * (mode === 'SINGLE' ? 1 : batchSize * batchesPerDay)).toFixed(2)}</p>
+                       <p className="text-lg font-bold text-white print:text-black">${(calculations.suggestedPrice * (mode === 'SINGLE' ? 1 : batchSize * batchesPerDay)).toFixed(2)}</p>
                    </div>
                 </div>
              </div>
@@ -445,7 +476,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                       <p className="text-xs text-stone-500 dark:text-stone-400 print:text-gray-600">{item.quantity} {item.unit}</p>
                    </div>
                    <div className="text-right">
-                      <p className="font-bold text-stone-900 dark:text-white print:text-black">€{item.cost.toFixed(2)}</p>
+                      <p className="font-bold text-stone-900 dark:text-white print:text-black">${item.cost.toFixed(2)}</p>
                       {item.cost === 0 && <span className="text-[10px] text-red-400 font-bold print:text-red-600">{t.noPrice}</span>}
                    </div>
                 </div>
@@ -458,13 +489,13 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                        <p className="font-bold text-rose-800 dark:text-rose-300 print:text-black">Otros Gastos</p>
                        <p className="text-xs text-rose-500 dark:text-rose-400 print:text-gray-600">Fijo</p>
                     </div>
-                    <p className="font-bold text-rose-900 dark:text-rose-200 print:text-black">€{calculations.extras.toFixed(2)}</p>
+                    <p className="font-bold text-rose-900 dark:text-rose-200 print:text-black">${calculations.extras.toFixed(2)}</p>
                  </div>
               )}
 
               <div className="p-4 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center font-bold text-stone-800 dark:text-white print:bg-gray-200 print:text-black">
                  <span>{t.totalMaterials}</span>
-                 <span>€{calculations.totalRecipeCost.toFixed(2)}</span>
+                 <span>${calculations.totalRecipeCost.toFixed(2)}</span>
               </div>
            </div>
         </div>

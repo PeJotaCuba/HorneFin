@@ -80,10 +80,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
         
         <div class="stat-box">
           <h3>Balance Estimado</h3>
-          <p>Costos Totales: <span class="stat-val">€${totalCosts.toFixed(2)}</span></p>
-          <p>Ingresos Estimados: <span class="stat-val green">€${totalRevenue.toFixed(2)}</span></p>
+          <p>Costos Totales: <span class="stat-val">$${totalCosts.toFixed(2)}</span></p>
+          <p>Ingresos Estimados: <span class="stat-val green">$${totalRevenue.toFixed(2)}</span></p>
           <hr/>
-          <p>Ganancia Potencial: <span class="stat-val profit">€${totalProfit.toFixed(2)}</span></p>
+          <p>Ganancia Potencial: <span class="stat-val profit">$${totalProfit.toFixed(2)}</span></p>
         </div>
 
         <h3>Top Costos de Insumos</h3>
@@ -98,7 +98,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
             ${pieData.map(item => `
               <tr>
                 <td style="text-transform: capitalize;">${item.name}</td>
-                <td>€${item.value.toFixed(2)}</td>
+                <td>$${item.value.toFixed(2)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -148,18 +148,18 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
         <div className="grid grid-cols-2 gap-3">
            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
               <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.totalCosts}</p>
-              <p className="text-xl font-bold text-stone-800 dark:text-stone-200 print:text-black">€{totalCosts.toFixed(2)}</p>
+              <p className="text-xl font-bold text-stone-800 dark:text-stone-200 print:text-black">${totalCosts.toFixed(2)}</p>
            </div>
            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
               <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.estRevenue}</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-500 print:text-black">€{totalRevenue.toFixed(2)}</p>
+              <p className="text-xl font-bold text-green-600 dark:text-green-500 print:text-black">${totalRevenue.toFixed(2)}</p>
            </div>
            <div className="col-span-2 bg-rose-500 p-5 rounded-2xl text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 print:bg-white print:text-black print:border print:border-black print:shadow-none">
               <div className="flex justify-between items-center mb-2">
                  <p className="text-rose-100 font-bold text-sm uppercase print:text-black">{t.netProfit}</p>
                  <Icons.Up size={20} className="text-rose-200 no-print" />
               </div>
-              <p className="text-3xl font-bold print:text-black">€{totalProfit.toFixed(2)}</p>
+              <p className="text-3xl font-bold print:text-black">${totalProfit.toFixed(2)}</p>
               <p className="text-xs text-rose-100 mt-1 opacity-80 print:text-gray-600">{t.profitHint}</p>
            </div>
         </div>
@@ -189,7 +189,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
                     <Tooltip 
                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
                        itemStyle={{ color: '#1c1917' }}
-                       formatter={(value: number) => `€${value.toFixed(2)}`}
+                       formatter={(value: number) => `$${value.toFixed(2)}`}
                     />
                  </PieChart>
                </ResponsiveContainer>
@@ -207,7 +207,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
                       <div className="w-3 h-3 rounded-full print:border print:border-black" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                       <span className="text-stone-600 dark:text-stone-300 capitalize print:text-black">{entry.name}</span>
                    </div>
-                   <span className="font-bold text-stone-800 dark:text-stone-200 print:text-black">€{entry.value.toFixed(2)}</span>
+                   <span className="font-bold text-stone-800 dark:text-stone-200 print:text-black">${entry.value.toFixed(2)}</span>
                 </div>
               ))}
            </div>
