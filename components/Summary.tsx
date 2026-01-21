@@ -2,7 +2,7 @@ import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
-import { calculateIngredientCost } from '../utils/units';
+import { calculateIngredientCost, normalizeKey } from '../utils/units';
 
 interface SummaryProps {
   recipes: Recipe[];
@@ -21,8 +21,11 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   recipes.forEach(recipe => {
     let recipeCost = 0;
     recipe.ingredients.forEach(ing => {
-       const key = ing.name.toLowerCase();
+       // CORRECCIÓN: Usar normalizeKey para buscar en la despensa global
+       // Esto asegura que "harina" en receta coincida con "Harina" en despensa
+       const key = normalizeKey(ing.name);
        const pItem = pantry[key];
+       
        let cost = 0;
        if (pItem && pItem.price > 0) {
           cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);

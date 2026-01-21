@@ -4,7 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { CostAnalysis } from './components/CostAnalysis';
 import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
-import { Guide } from './components/Guide';
+import { Shopping } from './components/Shopping';
 import { NavBar } from './components/NavBar';
 import { TRANSLATIONS, Language } from './utils/translations';
 import { normalizeKey } from './utils/units';
@@ -163,8 +163,12 @@ export default function App() {
           />
         )}
         
-        {currentView === AppView.GUIDE && (
-          <Guide t={t} />
+        {currentView === AppView.SHOPPING && (
+          <Shopping 
+             recipes={recipes} 
+             pantry={pantry}
+             t={t} 
+          />
         )}
 
         {currentView === AppView.COST_ANALYSIS && selectedRecipe && (

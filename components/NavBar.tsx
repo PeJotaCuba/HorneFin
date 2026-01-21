@@ -14,8 +14,8 @@ export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView, t }) 
   const navItems = [
     { id: AppView.DASHBOARD, icon: Icons.Home, label: t.navHome, info: t.navHomeInfo },
     { id: AppView.PANTRY, icon: Icons.Money, label: t.navCosts, info: t.navCostsInfo },
+    { id: AppView.SHOPPING, icon: Icons.Package, label: t.navShopping, info: t.navShoppingInfo },
     { id: AppView.SUMMARY, icon: Icons.PieChart, label: t.navSummary, info: t.navSummaryInfo },
-    { id: AppView.GUIDE, icon: Icons.Help, label: t.navGuide, info: t.navGuideInfo },
   ];
 
   return (
