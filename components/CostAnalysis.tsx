@@ -63,7 +63,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     onUpdatePantry(Object.values(pantryFormValues));
     
     // 2. Calcular costo TOTAL basado en los valores que ACABAMOS de editar
-    // (No confiamos en props.pantry todavía porque React puede tardar en actualizar)
     let calculatedTotal = 0;
     
     recipe.ingredients.forEach(ing => {
@@ -107,22 +106,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
      setIsEditingName(false);
   };
 
-  const handleDownloadPDF = () => {
-    const originalTitle = document.title;
-    document.title = `Finanzas_${recipe.name.replace(/\s+/g, '_')}`;
-    window.print();
-    document.title = originalTitle;
-  };
-
-  // Cálculos en tiempo real para la vista de resumen
+  // Cálculos en tiempo real
   const calculations = useMemo(() => {
     let totalMaterialsCost = 0;
     
     const ingredientBreakdown = recipe.ingredients.map(ing => {
       const key = normalizeKey(ing.name);
-      
-      // Intentamos usar el valor global (pantry), si no existe (porque acabamos de guardar
-      // y la prop no ha llegado), usamos el valor del formulario local si existe.
       const pantryItem = pantry[key] || pantryFormValues[key];
       
       let cost = 0;
@@ -155,20 +144,100 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     };
   }, [recipe, pantry, pantryFormValues, mode, batchSize, batchesPerDay, desiredMargin]);
 
-  // FORMULARIO DE EDICIÓN DE PRECIOS
+  // Función para exportar reporte a "Word" (HTML disfrazado)
+  const handleExportReport = () => {
+    const date = new Date().toLocaleDateString();
+    
+    // Construcción del HTML para el reporte
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>${recipe.name} - Reporte</title>
+        <style>
+          body { font-family: 'Arial', sans-serif; padding: 20px; }
+          h1 { color: #E11D48; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; color: #333; }
+          .total-row { font-weight: bold; background-color: #f9f9f9; }
+          .card { border: 1px solid #ccc; padding: 15px; background: #fafafa; margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <h1>${recipe.name}</h1>
+        <p><strong>Fecha:</strong> ${date}</p>
+        <p><strong>Modo:</strong> ${mode === 'SINGLE' ? 'Individual' : `Lote (${batchSize} unids)`}</p>
+        
+        <div class="card">
+          <h2>Resumen Financiero</h2>
+          <p><strong>Costo Producción:</strong> €${calculations.costPerItem.toFixed(2)}</p>
+          <p><strong>Precio Sugerido:</strong> €${calculations.suggestedPrice.toFixed(2)} (Margen ${desiredMargin}%)</p>
+          <p><strong>Ganancia Estimada:</strong> €${calculations.dailyProfit.toFixed(2)}</p>
+        </div>
+
+        <h2>Desglose de Costos</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th>Cantidad</th>
+              <th>Costo</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${calculations.ingredientBreakdown.map(ing => `
+              <tr>
+                <td>${ing.name}</td>
+                <td>${ing.quantity} ${ing.unit}</td>
+                <td>€${ing.cost.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+            ${calculations.extras > 0 ? `
+              <tr>
+                <td>Otros Gastos (Fijo)</td>
+                <td>1</td>
+                <td>€${calculations.extras.toFixed(2)}</td>
+              </tr>
+            ` : ''}
+            <tr class="total-row">
+              <td colspan="2">Costo Total Receta</td>
+              <td>€${calculations.totalRecipeCost.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size: 10px; color: #888; margin-top: 20px;">Generado con HorneFin App</p>
+      </body>
+      </html>
+    `;
+
+    // Crear blob y descargar
+    const blob = new Blob(['\ufeff', htmlContent], {
+      type: 'application/msword'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Reporte_${recipe.name.replace(/\s+/g, '_')}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // FORMULARIO DE EDICIÓN DE PRECIOS - Layout Flexbox Corregido
   if (showPantryForm) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-stone-50 dark:bg-stone-950">
-        {/* Header Modal */}
-        <div className="bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm shrink-0">
+      <div className="fixed inset-0 z-[100] bg-stone-50 dark:bg-stone-950 flex flex-col h-[100dvh]">
+        {/* Header (Fijo) */}
+        <div className="flex-none bg-white dark:bg-stone-900 p-4 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
           <h2 className="text-lg font-bold text-stone-800 dark:text-white">{t.updatePrices}</h2>
           <button onClick={() => setShowPantryForm(false)} className="text-stone-400 hover:text-stone-600">
              <Icons.Close />
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-4 pb-32">
+        {/* Contenido Scrollable */}
+        <div className="flex-1 overflow-y-auto p-4">
             <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 text-sm mb-4 p-3 rounded-lg border border-amber-100 dark:border-amber-900/50">
               <p>{t.pricesInfo}</p>
             </div>
@@ -221,7 +290,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
               ))}
 
               {/* Other Expenses */}
-              <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6">
+              <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl p-4 shadow-sm mt-6 mb-4">
                  <div className="flex items-center gap-2 mb-3">
                    <Icons.Settings className="text-rose-500" size={20} />
                    <p className="font-bold text-lg text-rose-800 dark:text-rose-200">{t.otherExpenses}</p>
@@ -241,8 +310,8 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             </div>
         </div>
 
-        {/* Footer Fixed Button */}
-        <div className="p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 shadow-[0_-5px_15px_rgba(0,0,0,0.1)] z-50 shrink-0">
+        {/* Footer con Botón Guardar (Fijo al fondo del modal, pero dentro del flex) */}
+        <div className="flex-none p-4 bg-white dark:bg-stone-900 border-t border-stone-100 dark:border-stone-800 shadow-[0_-5px_15px_rgba(0,0,0,0.1)]">
           <button 
             onClick={handlePantrySubmit}
             className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-4 rounded-xl font-bold text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2"
@@ -283,10 +352,11 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
         
         <div className="flex gap-2">
             <button 
-                onClick={handleDownloadPDF} 
+                onClick={handleExportReport} 
                 className="flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+                title="Descargar Reporte DOC"
             >
-                <Icons.Download size={18} />
+                <Icons.File size={18} />
                 <span className="text-xs font-bold">{t.printPdf}</span>
             </button>
         </div>
@@ -310,36 +380,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           </button>
         </div>
         
-        {/* Print Title Only */}
-        <div className="hidden print:block text-center mb-4">
-            <h1 className="text-2xl font-bold">{recipe.name}</h1>
-            <p className="text-sm text-gray-500">Reporte Financiero - HorneFin</p>
-        </div>
-
-        {/* Configuration for Batch */}
-        {mode === 'BATCH' && (
-          <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 space-y-3 print:border-gray-300">
-             <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchSize}</span>
-                <input 
-                  type="number" 
-                  value={batchSize} 
-                  onChange={(e) => setBatchSize(Number(e.target.value))}
-                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
-                />
-             </div>
-             <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-stone-600 dark:text-stone-300">{t.batchesDay}</span>
-                <input 
-                  type="number" 
-                  value={batchesPerDay} 
-                  onChange={(e) => setBatchesPerDay(Number(e.target.value))}
-                  className="w-20 p-1 text-right font-bold border border-stone-200 dark:border-stone-700 rounded bg-stone-50 dark:bg-stone-800 dark:text-white focus:border-rose-400 focus:outline-none"
-                />
-             </div>
-          </div>
-        )}
-
         {/* Main Financial Card */}
         <div className="bg-stone-900 dark:bg-stone-800 rounded-3xl p-6 text-white shadow-xl shadow-stone-300 dark:shadow-none relative overflow-hidden print:bg-white print:text-black print:border print:border-black print:shadow-none">
            <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500 blur-[60px] opacity-20 rounded-full print:hidden"></div>

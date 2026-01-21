@@ -45,7 +45,7 @@ export const TRANSLATIONS = {
     otherExpenses: "Otros Gastos (Luz, Gas, Empaque)",
     otherExpensesHint: "Importe fijo para esta receta",
     noPrice: "Sin Precio",
-    printPdf: "Descargar PDF",
+    printPdf: "Exportar Reporte",
     // Pantry
     pantryTitle: "Costos Globales",
     pantrySubtitle: "Precios de insumos aplicables a todas las recetas.",
@@ -69,7 +69,7 @@ export const TRANSLATIONS = {
     navHomeInfo: "Gestión de Recetas",
     navCostsInfo: "Precios de Insumos",
     navSummaryInfo: "Estadísticas Globales",
-    navGuideInfo: "Aprende a usar la App",
+    navGuideInfo: "Aprenda a usar la App",
     // Actions
     downloadBackup: "Descargar Base de Datos",
     uploadBackup: "Cargar Respaldo",
@@ -122,7 +122,7 @@ export const TRANSLATIONS = {
     otherExpenses: "Other Expenses (Gas, Packaging)",
     otherExpensesHint: "Fixed amount for this recipe",
     noPrice: "No Price",
-    printPdf: "Download PDF",
+    printPdf: "Export Report",
     // Pantry
     pantryTitle: "Global Costs",
     pantrySubtitle: "Ingredient prices applicable to all recipes.",
@@ -199,7 +199,7 @@ export const TRANSLATIONS = {
     otherExpenses: "Outras Despesas (Gás, Embalagem)",
     otherExpensesHint: "Valor fixo para esta receita",
     noPrice: "Sem Preço",
-    printPdf: "Baixar PDF",
+    printPdf: "Exportar Relatório",
     // Pantry
     pantryTitle: "Custos Globais",
     pantrySubtitle: "Preços de ingredientes aplicáveis a todas as receitas.",

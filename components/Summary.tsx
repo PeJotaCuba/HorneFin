@@ -54,11 +54,69 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   // Vibrant colors for the pie chart as requested
   const COLORS = ['#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#64748B'];
 
-  const handleDownloadPDF = () => {
-    const originalTitle = document.title;
-    document.title = "HorneFin_Finanzas_Globales";
-    window.print();
-    document.title = originalTitle;
+  const handleExportReport = () => {
+    const date = new Date().toLocaleDateString();
+    
+    const htmlContent = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset="utf-8">
+        <title>Reporte Financiero Global</title>
+        <style>
+          body { font-family: 'Arial', sans-serif; padding: 20px; }
+          h1 { color: #8B5CF6; }
+          .stat-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; background: #f9f9f9; }
+          .stat-val { font-size: 18px; font-weight: bold; }
+          .profit { color: #E11D48; font-size: 24px; }
+          .green { color: #10B981; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+        </style>
+      </head>
+      <body>
+        <h1>Resumen Financiero - HorneFin</h1>
+        <p><strong>Fecha:</strong> ${date}</p>
+        
+        <div class="stat-box">
+          <h3>Balance Estimado</h3>
+          <p>Costos Totales: <span class="stat-val">€${totalCosts.toFixed(2)}</span></p>
+          <p>Ingresos Estimados: <span class="stat-val green">€${totalRevenue.toFixed(2)}</span></p>
+          <hr/>
+          <p>Ganancia Potencial: <span class="stat-val profit">€${totalProfit.toFixed(2)}</span></p>
+        </div>
+
+        <h3>Top Costos de Insumos</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Ingrediente</th>
+              <th>Costo Acumulado</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pieData.map(item => `
+              <tr>
+                <td style="text-transform: capitalize;">${item.name}</td>
+                <td>€${item.value.toFixed(2)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff', htmlContent], {
+      type: 'application/msword'
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `HorneFin_Finanzas_${date.replace(/\//g, '-')}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -75,10 +133,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
                 <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
             </div>
             <button 
-                onClick={handleDownloadPDF} 
+                onClick={handleExportReport} 
                 className="flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
             >
-                <Icons.Download size={18} />
+                <Icons.File size={18} />
                 <span className="text-xs font-bold">{t.printPdf}</span>
             </button>
         </div>
@@ -86,12 +144,6 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
 
       <div className="p-4 space-y-6 print:space-y-4">
         
-        {/* Print Title Only */}
-        <div className="hidden print:block text-center mb-4">
-            <h1 className="text-2xl font-bold">Finanzas Globales</h1>
-            <p className="text-sm text-gray-500">Reporte General - HorneFin</p>
-        </div>
-
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
            <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
