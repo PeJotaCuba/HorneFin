@@ -41,5 +41,6 @@ export enum AppView {
   DASHBOARD = 'DASHBOARD',     // Inicio
   PANTRY = 'PANTRY',           // Costos Globales
   SUMMARY = 'SUMMARY',         // Finanzas Globales
-  COST_ANALYSIS = 'COST_ANALYSIS' // Detalle de Receta
+  COST_ANALYSIS = 'COST_ANALYSIS', // Detalle de Receta
+  GUIDE = 'GUIDE'              // Guía de Usuario
 }

@@ -15,10 +15,11 @@ export const NavBar: React.FC<NavBarProps> = ({ currentView, onChangeView, t }) 
     { id: AppView.DASHBOARD, icon: Icons.Home, label: t.navHome, info: t.navHomeInfo },
     { id: AppView.PANTRY, icon: Icons.Money, label: t.navCosts, info: t.navCostsInfo },
     { id: AppView.SUMMARY, icon: Icons.PieChart, label: t.navSummary, info: t.navSummaryInfo },
+    { id: AppView.GUIDE, icon: Icons.Help, label: t.navGuide, info: t.navGuideInfo },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 pb-safe pt-2 px-6 shadow-2xl z-50 h-[80px] transition-colors duration-300">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-stone-900 border-t border-stone-200 dark:border-stone-800 pb-safe pt-2 px-6 shadow-2xl z-50 h-[80px] transition-colors duration-300 no-print">
       <div className="flex justify-around items-center h-full pb-2">
         {navItems.map((item) => {
            // Helper to determine if active

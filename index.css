@@ -25,3 +25,26 @@ body {
 .dark ::-webkit-scrollbar-thumb {
   background: #44403c;
 }
+
+/* Print Styles */
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    
+    body {
+        background-color: white;
+    }
+
+    /* Reset text colors for print readability */
+    p, h1, h2, h3, span, div {
+        color: black !important;
+        text-shadow: none !important;
+    }
+
+    /* Ensure backgrounds print if user settings allow, but mostly keep it clean */
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
+import { getDefaultUnit } from '../utils/units';
 
 interface PantryProps {
   recipes: Recipe[];
@@ -24,7 +25,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
         name: name,
         price: 0,
         quantity: 1,
-        unit: 'kg'
+        unit: getDefaultUnit(name) // Auto-detect unit
       };
     });
 
@@ -116,6 +117,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                     <option value="l">l</option>
                     <option value="oz">oz</option>
                     <option value="u">u</option>
+                    <option value="file">file (30u)</option>
                  </select>
               </div>
             </div>

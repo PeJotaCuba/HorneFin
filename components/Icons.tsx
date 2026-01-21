@@ -27,7 +27,10 @@ import {
   Moon,
   Sun,
   Download,
-  Globe
+  Globe,
+  HelpCircle,
+  Printer,
+  UploadCloud
 } from 'lucide-react';
 
 export const Icons = {
@@ -58,5 +61,8 @@ export const Icons = {
   Moon,
   Sun,
   Download,
-  Globe
+  Globe,
+  Help: HelpCircle,
+  Print: Printer,
+  UploadDB: UploadCloud
 };

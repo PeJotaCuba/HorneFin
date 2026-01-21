@@ -1,4 +1,5 @@
 // Simple conversion map to grams or ml
+// Base units: g (weight), ml (volume), u (count)
 const CONVERSION_RATES: Record<string, number> = {
   'g': 1,
   'kg': 1000,
@@ -13,11 +14,27 @@ const CONVERSION_RATES: Record<string, number> = {
   'pza': 1,
   'cda': 15, // Tablespoon approx
   'cdita': 5, // Teaspoon approx
-  'taza': 240 // Cup approx
+  'taza': 240, // Cup approx
+  'file': 30 // Equivalente a 30 unidades (huevos)
 };
 
 export const normalizeUnit = (unit: string): string => {
   return unit.toLowerCase().replace(/s$/, ''); // Remove trailing s
+};
+
+// Helper para preestablecer unidades según el nombre del ingrediente
+export const getDefaultUnit = (name: string): string => {
+  const n = name.toLowerCase();
+  
+  if (n.includes('huevo')) return 'file';
+  if (n.includes('harina')) return 'kg';
+  if (n.includes('azucar') || n.includes('azúcar')) return 'kg';
+  if (n.includes('aceite')) return 'l';
+  if (n.includes('leche')) return 'l';
+  if (n.includes('miel')) return 'l';
+  
+  // Default fallback
+  return 'kg';
 };
 
 export const calculateIngredientCost = (
@@ -35,7 +52,7 @@ export const calculateIngredientCost = (
     return (recipeQty / purchaseQty) * purchasePrice;
   }
 
-  // Convert both to base unit (g or ml) if possible
+  // Convert both to base unit (g, ml, or u) if possible
   const rFactor = CONVERSION_RATES[rUnit];
   const pFactor = CONVERSION_RATES[pUnit];
 

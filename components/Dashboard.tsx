@@ -9,6 +9,7 @@ interface DashboardProps {
   onAddRecipe: (recipe: Recipe) => void;
   onUpdateRecipe?: (recipe: Recipe) => void;
   onDeleteRecipe?: (id: string) => void;
+  onRestoreBackup: (data: any) => void;
   darkMode: boolean;
   toggleDarkMode: () => void;
   onDownloadBackup: () => void;
@@ -60,6 +61,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddRecipe, 
   onUpdateRecipe,
   onDeleteRecipe,
+  onRestoreBackup,
   darkMode, 
   toggleDarkMode, 
   onDownloadBackup,
@@ -70,6 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [inputMode, setInputMode] = useState<'MANUAL' | 'FILE'>('MANUAL');
   const [showLangMenu, setShowLangMenu] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
   
   // Manual Form State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -161,6 +164,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleBackupUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const json = JSON.parse(event.target?.result as string);
+        onRestoreBackup(json);
+        alert(t.restoreSuccess);
+      } catch (err) {
+        alert(t.restoreError);
+      }
+    };
+    reader.readAsText(file);
+    if (backupInputRef.current) backupInputRef.current.value = '';
   };
 
   // Improved Local Regex Parser
@@ -277,6 +298,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
                {darkMode ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
             </button>
+            
+            {/* Download */}
             <button 
               onClick={onDownloadBackup}
               className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
@@ -284,6 +307,24 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
                <Icons.Download size={20} />
             </button>
+
+            {/* Upload */}
+            <div className="relative">
+               <button 
+                 onClick={() => backupInputRef.current?.click()}
+                 className="p-2 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+                 title={t.uploadBackup}
+               >
+                 <Icons.UploadDB size={20} />
+               </button>
+               <input 
+                  ref={backupInputRef}
+                  type="file" 
+                  accept=".json"
+                  className="hidden"
+                  onChange={handleBackupUpload}
+               />
+            </div>
           </div>
         </div>
       </div>
@@ -365,6 +406,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <option value="cda">cda</option>
                           <option value="cdita">cdita</option>
                           <option value="taza">taza</option>
+                          <option value="file">file (30u)</option>
                         </select>
                       </div>
                     </div>

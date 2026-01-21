@@ -4,6 +4,7 @@ import { Dashboard } from './components/Dashboard';
 import { CostAnalysis } from './components/CostAnalysis';
 import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
+import { Guide } from './components/Guide';
 import { NavBar } from './components/NavBar';
 import { TRANSLATIONS, Language } from './utils/translations';
 
@@ -13,6 +14,7 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState<Language>('ES');
+  const [initialEditMode, setInitialEditMode] = useState(false);
   
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
 
@@ -57,6 +59,13 @@ export default function App() {
 
   const handleSelectRecipe = (recipe: Recipe) => {
     setSelectedRecipe(recipe);
+    // Logic to determine if we should show the price config form immediately.
+    // Check if recipe has totalCost calculated (meaning it has been saved in CostAnalysis before)
+    if (!recipe.totalCost || recipe.totalCost === 0) {
+        setInitialEditMode(true);
+    } else {
+        setInitialEditMode(false);
+    }
     setCurrentView(AppView.COST_ANALYSIS);
   };
 
@@ -89,7 +98,9 @@ export default function App() {
     const data = {
       timestamp: new Date().toISOString(),
       recipes,
-      pantry
+      pantry,
+      darkMode,
+      language
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -100,6 +111,13 @@ export default function App() {
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+  };
+
+  const handleRestoreBackup = (data: any) => {
+      if (data.recipes) setRecipes(data.recipes);
+      if (data.pantry) setPantry(data.pantry);
+      // Optional: restore settings
+      // if (data.darkMode !== undefined) setDarkMode(data.darkMode);
   };
 
   const t = TRANSLATIONS[language];
@@ -116,6 +134,7 @@ export default function App() {
             onUpdateRecipe={handleUpdateRecipe}
             onDeleteRecipe={handleDeleteRecipe}
             onSelectRecipe={handleSelectRecipe}
+            onRestoreBackup={handleRestoreBackup}
             darkMode={darkMode}
             toggleDarkMode={() => setDarkMode(!darkMode)}
             onDownloadBackup={handleDownloadBackup}
@@ -141,6 +160,10 @@ export default function App() {
              t={t}
           />
         )}
+        
+        {currentView === AppView.GUIDE && (
+          <Guide t={t} />
+        )}
 
         {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
           <CostAnalysis 
@@ -149,6 +172,7 @@ export default function App() {
             onUpdatePantry={handleUpdatePantry}
             onUpdateRecipe={handleUpdateRecipe}
             onBack={() => setCurrentView(AppView.DASHBOARD)}
+            initialEditMode={initialEditMode}
             t={t}
           />
         )}

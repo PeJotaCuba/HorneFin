@@ -54,43 +54,60 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   // Vibrant colors for the pie chart as requested
   const COLORS = ['#F43F5E', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#64748B'];
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800">
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-           <span className="bg-purple-500 text-white p-1.5 rounded-lg">
-             <Icons.PieChart size={20} />
-           </span>
-           {t.summaryTitle}
-        </h1>
-        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
+      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm sticky top-0 z-20 border-b border-stone-100 dark:border-stone-800 no-print">
+        <div className="flex justify-between items-center">
+            <div>
+                <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                <span className="bg-purple-500 text-white p-1.5 rounded-lg">
+                    <Icons.PieChart size={20} />
+                </span>
+                {t.summaryTitle}
+                </h1>
+                <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
+            </div>
+            <button onClick={handlePrint} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700">
+                <Icons.Print size={20} />
+            </button>
+        </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 print:space-y-4">
         
+        {/* Print Title Only */}
+        <div className="hidden print:block text-center mb-4">
+            <h1 className="text-2xl font-bold">Finanzas Globales</h1>
+            <p className="text-sm text-gray-500">Reporte General - HorneFin</p>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-3">
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.totalCosts}</p>
-              <p className="text-xl font-bold text-stone-800 dark:text-stone-200">€{totalCosts.toFixed(2)}</p>
+           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
+              <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.totalCosts}</p>
+              <p className="text-xl font-bold text-stone-800 dark:text-stone-200 print:text-black">€{totalCosts.toFixed(2)}</p>
            </div>
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.estRevenue}</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-500">€{totalRevenue.toFixed(2)}</p>
+           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
+              <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.estRevenue}</p>
+              <p className="text-xl font-bold text-green-600 dark:text-green-500 print:text-black">€{totalRevenue.toFixed(2)}</p>
            </div>
-           <div className="col-span-2 bg-rose-500 p-5 rounded-2xl text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20">
+           <div className="col-span-2 bg-rose-500 p-5 rounded-2xl text-white shadow-lg shadow-rose-200 dark:shadow-rose-900/20 print:bg-white print:text-black print:border print:border-black print:shadow-none">
               <div className="flex justify-between items-center mb-2">
-                 <p className="text-rose-100 font-bold text-sm uppercase">{t.netProfit}</p>
-                 <Icons.Up size={20} className="text-rose-200" />
+                 <p className="text-rose-100 font-bold text-sm uppercase print:text-black">{t.netProfit}</p>
+                 <Icons.Up size={20} className="text-rose-200 no-print" />
               </div>
-              <p className="text-3xl font-bold">€{totalProfit.toFixed(2)}</p>
-              <p className="text-xs text-rose-100 mt-1 opacity-80">{t.profitHint}</p>
+              <p className="text-3xl font-bold print:text-black">€{totalProfit.toFixed(2)}</p>
+              <p className="text-xs text-rose-100 mt-1 opacity-80 print:text-gray-600">{t.profitHint}</p>
            </div>
         </div>
 
         {/* Chart */}
-        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-           <h3 className="font-bold text-stone-800 dark:text-white mb-4 text-sm uppercase tracking-wide">{t.costDistribution}</h3>
+        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
+           <h3 className="font-bold text-stone-800 dark:text-white mb-4 text-sm uppercase tracking-wide print:text-black">{t.costDistribution}</h3>
            
            {pieData.length > 0 ? (
              <div className="h-64 w-full">
@@ -128,10 +145,10 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
               {pieData.map((entry, index) => (
                 <div key={index} className="flex justify-between items-center text-sm">
                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-stone-600 dark:text-stone-300 capitalize">{entry.name}</span>
+                      <div className="w-3 h-3 rounded-full print:border print:border-black" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-stone-600 dark:text-stone-300 capitalize print:text-black">{entry.name}</span>
                    </div>
-                   <span className="font-bold text-stone-800 dark:text-stone-200">€{entry.value.toFixed(2)}</span>
+                   <span className="font-bold text-stone-800 dark:text-stone-200 print:text-black">€{entry.value.toFixed(2)}</span>
                 </div>
               ))}
            </div>
