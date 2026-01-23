@@ -1,5 +1,5 @@
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
 import { calculateIngredientCost, normalizeKey } from '../utils/units';
@@ -11,7 +11,6 @@ interface SummaryProps {
 }
 
 export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
-  // Calculate aggregate stats
   let totalRevenue = 0;
   let totalCosts = 0;
   let totalProfit = 0;
@@ -22,20 +21,17 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
     recipe.ingredients.forEach(ing => {
        const key = normalizeKey(ing.name);
        const pItem = pantry[key];
-       
        let cost = 0;
        if (pItem && pItem.price > 0) {
           cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
        }
        recipeCost += cost;
-       
        ingredientCosts[key] = (ingredientCosts[key] || 0) + cost;
     });
 
     const otherExpenses = recipe.otherExpenses || 0;
     recipeCost += otherExpenses;
-
-    const margin = recipe.profitMargin || 45;
+    const margin = recipe.profitMargin || 25;
     const price = recipe.suggestedPrice || (recipeCost > 0 ? recipeCost / (1 - (margin / 100)) : 0);
     
     totalCosts += recipeCost;
@@ -48,168 +44,72 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6); 
 
-  // Palette basada en el logo: Rojo, Naranja, Ámbar, Amarillo, Gris
   const COLORS = ['#DC2626', '#EA580C', '#D97706', '#CA8A04', '#65A30D', '#57534E'];
-
-  const handleExportReport = () => {
-    const date = new Date().toLocaleDateString();
-    
-    const htmlContent = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head>
-        <meta charset="utf-8">
-        <title>Reporte Financiero Global</title>
-        <style>
-          body { font-family: 'Arial', sans-serif; padding: 20px; }
-          h1 { color: #5D2E1F; }
-          .stat-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; background: #f9f9f9; }
-          .stat-val { font-size: 18px; font-weight: bold; }
-          .profit { color: #DC2626; font-size: 24px; }
-          .green { color: #10B981; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-          th { background-color: #f2f2f2; }
-        </style>
-      </head>
-      <body>
-        <h1>Resumen Financiero - HorneFin</h1>
-        <p><strong>Fecha:</strong> ${date}</p>
-        
-        <div class="stat-box">
-          <h3>Balance Estimado</h3>
-          <p>Costos Totales: <span class="stat-val">$${totalCosts.toFixed(2)}</span></p>
-          <p>Ingresos Estimados: <span class="stat-val green">$${totalRevenue.toFixed(2)}</span></p>
-          <hr/>
-          <p>Ganancia Potencial: <span class="stat-val profit">$${totalProfit.toFixed(2)}</span></p>
-        </div>
-
-        <h3>Top Costos de Insumos</h3>
-        <table>
-          <thead>
-            <tr>
-              <th>Ingrediente</th>
-              <th>Costo Acumulado</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${pieData.map(item => `
-              <tr>
-                <td style="text-transform: capitalize;">${item.name}</td>
-                <td>$${item.value.toFixed(2)}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </body>
-      </html>
-    `;
-
-    const blob = new Blob(['\ufeff', htmlContent], {
-      type: 'application/msword'
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `HorneFin_Finanzas_${date.replace(/\//g, '-')}.doc`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
 
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 no-print">
-        <div className="flex justify-between items-center">
-            <div>
-                <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-                <span className="bg-red-600 text-white p-1 rounded-lg">
-                    <Icons.PieChart size={18} />
-                </span>
-                {t.summaryTitle}
-                </h1>
-                <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
-            </div>
-            <button 
-                onClick={handleExportReport} 
-                className="flex items-center gap-2 px-3 py-2 bg-stone-100 dark:bg-stone-800 rounded-full text-stone-600 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition"
-            >
-                <Icons.File size={18} />
-                <span className="text-xs font-bold">{t.printPdf}</span>
-            </button>
-        </div>
+      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
+        <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+          <span className="bg-red-600 text-white p-1 rounded-lg"><Icons.PieChart size={18} /></span>
+          {t.summaryTitle}
+        </h1>
+        <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.summarySubtitle}</p>
       </div>
 
-      <div className="p-4 space-y-6 print:space-y-4">
-        
-        {/* Stats Grid */}
+      <div className="p-4 space-y-6">
         <div className="grid grid-cols-2 gap-3">
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.totalCosts}</p>
-              <p className="text-xl font-bold text-stone-800 dark:text-stone-200 print:text-black">${totalCosts.toFixed(2)}</p>
+           <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+              <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{t.totalCosts}</p>
+              <p className="text-xl font-bold text-stone-800 dark:text-stone-200">${totalCosts.toFixed(2)}</p>
            </div>
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
-              <p className="text-xs font-bold text-stone-400 uppercase mb-1 print:text-black">{t.estRevenue}</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-500 print:text-black">${totalRevenue.toFixed(2)}</p>
+           <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+              <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{t.estRevenue}</p>
+              <p className="text-xl font-bold text-green-600 dark:text-green-500">${totalRevenue.toFixed(2)}</p>
            </div>
-           <div className="col-span-2 bg-red-600 p-5 rounded-2xl text-white shadow-lg shadow-red-200 dark:shadow-red-900/20 print:bg-white print:text-black print:border print:border-black print:shadow-none">
-              <div className="flex justify-between items-center mb-2">
-                 <p className="text-red-100 font-bold text-sm uppercase print:text-black">{t.netProfit}</p>
-                 <Icons.Up size={20} className="text-red-200 no-print" />
+           <div className="col-span-2 bg-red-600 p-6 rounded-[2rem] text-white shadow-xl shadow-red-100 dark:shadow-none relative overflow-hidden">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
+              <div className="relative z-10">
+                 <p className="text-red-100 font-bold text-xs uppercase tracking-widest mb-1">{t.netProfit}</p>
+                 <p className="text-4xl font-bold">${totalProfit.toFixed(2)}</p>
+                 <p className="text-[10px] text-red-100 mt-2 opacity-80">{t.profitHint}</p>
               </div>
-              <p className="text-3xl font-bold print:text-black">${totalProfit.toFixed(2)}</p>
-              <p className="text-xs text-red-100 mt-1 opacity-80 print:text-gray-600">{t.profitHint}</p>
            </div>
         </div>
 
-        {/* Chart */}
-        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 print:border-gray-300">
-           <h3 className="font-bold text-stone-800 dark:text-white mb-4 text-sm uppercase tracking-wide print:text-black">{t.costDistribution}</h3>
+        <div className="bg-white dark:bg-stone-900 p-6 rounded-[2rem] shadow-sm border border-stone-100 dark:border-stone-800">
+           <h3 className="font-bold text-stone-800 dark:text-white mb-6 text-xs uppercase tracking-widest">{t.costDistribution}</h3>
            
            {pieData.length > 0 ? (
-             <div className="h-64 w-full">
+             <div className="h-64 w-full relative">
                <ResponsiveContainer width="100%" height="100%">
                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={5}
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {pieData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
+                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
+                      {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                     </Pie>
-                    <Tooltip 
-                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.9)' }}
-                       itemStyle={{ color: '#1c1917' }}
-                       formatter={(value: number) => `$${value.toFixed(2)}`}
-                    />
+                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }} />
                  </PieChart>
                </ResponsiveContainer>
+               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tighter">Insumos</span>
+                  <span className="font-black text-stone-800 dark:text-white">TOP {pieData.length}</span>
+               </div>
              </div>
            ) : (
-             <div className="h-40 flex items-center justify-center text-stone-300 dark:text-stone-600">
-               {t.noData}
-             </div>
+             <div className="h-40 flex items-center justify-center text-stone-300 dark:text-stone-600 italic text-sm">{t.noData}</div>
            )}
            
-           <div className="space-y-3 mt-2">
+           <div className="space-y-4 mt-4">
               {pieData.map((entry, index) => (
-                <div key={index} className="flex justify-between items-center text-sm">
-                   <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full print:border print:border-black" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-stone-600 dark:text-stone-300 capitalize print:text-black">{entry.name}</span>
+                <div key={index} className="flex justify-between items-center group">
+                   <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-sm font-bold text-stone-600 dark:text-stone-300 capitalize group-hover:text-stone-900 transition-colors">{entry.name}</span>
                    </div>
-                   <span className="font-bold text-stone-800 dark:text-stone-200 print:text-black">${entry.value.toFixed(2)}</span>
+                   <span className="font-black text-stone-800 dark:text-stone-200 text-sm">${entry.value.toFixed(2)}</span>
                 </div>
               ))}
            </div>
         </div>
-
       </div>
     </div>
   );

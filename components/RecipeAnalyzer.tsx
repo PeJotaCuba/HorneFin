@@ -54,7 +54,7 @@ export const RecipeAnalyzer: React.FC<RecipeAnalyzerProps> = ({ onSave, onCancel
   };
 
   const calculateTotals = useCallback(() => {
-    if (!parsedData) return { totalMaterials: 0, totalLabor: 0, overhead: 0, total: 0, price: 0 };
+    if (!parsedData) return { totalMaterials: 0, totalLabor: 0, overhead: 0, total: 0, price: 0, suggestedPrice: 0 };
 
     const totalMaterials = parsedData.ingredients.reduce((acc, curr) => acc + (curr.cost || 0), 0);
     const totalLabor = laborHours * hourlyRate;
@@ -71,18 +71,22 @@ export const RecipeAnalyzer: React.FC<RecipeAnalyzerProps> = ({ onSave, onCancel
     if (!parsedData) return;
     const totals = calculateTotals();
     
+    // Fix: Removed non-existent properties 'laborCost' and 'overheadPercentage' and added required properties 'mode' and 'batchSize'.
+    // Also merged labor and overhead into 'otherExpenses' to maintain cost accuracy.
     const newRecipe: Recipe = {
       id: Date.now().toString(),
       name: parsedData.name,
       ingredients: parsedData.ingredients,
-      laborCost: totals.totalLabor,
-      overheadPercentage: overheadPercent,
+      otherExpenses: totals.totalLabor + totals.overhead,
       totalCost: totals.total,
       suggestedPrice: totals.suggestedPrice,
       profitMargin: desiredMargin,
       // Random visually appealing bakery image from picsum
       imageUrl: `https://picsum.photos/seed/${Date.now()}/400/500`, 
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      mode: 'SINGLE',
+      batchSize: 1,
+      hasPricesConfigured: true
     };
     onSave(newRecipe);
   };
@@ -162,7 +166,7 @@ export const RecipeAnalyzer: React.FC<RecipeAnalyzerProps> = ({ onSave, onCancel
                   </div>
                   <div className="text-right">
                     <span className="block text-xs text-gray-400 uppercase font-bold">Costo Real</span>
-                    <span className="text-lg font-bold text-gray-900">€{ing.cost.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-gray-900">€{(ing.cost || 0).toFixed(2)}</span>
                   </div>
                 </div>
 
