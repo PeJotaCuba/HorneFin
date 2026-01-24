@@ -2,15 +2,29 @@ import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-// Fix: Implemented parseRecipeFromText using Gemini AI with structured JSON output via responseSchema.
+// Parse unstructured recipe text using Gemini AI
 export const parseRecipeFromText = async (text: string): Promise<any> => {
   const response = await ai.models.generateContent({
     model: 'gemini-3-flash-preview',
-    contents: `Parse the following recipe text and extract the name and a list of ingredients. 
-    Each ingredient should have a name, quantity (as a number), and unit. 
-    If a unit is unclear, use 'u' (units), 'g' (grams), or 'ml' (milliliters) as appropriate.
-    
-    Text: ${text}`,
+    contents: `You are an expert baker assistant. Your task is to extract a structured recipe from the following raw text. 
+    The text might contain ingredient lists with various formats (e.g., "Ingredient - Quantity", "Quantity Unit Ingredient", "1 cup of...", etc.) and may optionally include a title or instructions.
+
+    Rules:
+    1. Extract the **Recipe Name** if present. If not found, use a generic name based on the ingredients (e.g., "Pastry Recipe").
+    2. Extract a list of **Ingredients**.
+    3. For each ingredient, extract:
+       - **name**: The name of the item (e.g., "Flour", "Sugar"). Capitalize the first letter.
+       - **quantity**: A number. Convert fractions (1/2) to decimals (0.5). If a range is given, use the average. If no quantity is specified, use 0.
+       - **unit**: The unit of measurement (e.g., "g", "kg", "ml", "l", "taza", "cda", "cdita", "u"). 
+         - Normalize units: "cup"/"tazas" -> "taza", "tbsp"/"cucharada" -> "cda", "tsp"/"cucharadita" -> "cdita", "pcs"/"unidades" -> "u".
+         - If the unit is "pizca", "puñado" or similar imprecise terms, map it to "u" or a small weight in "g" if appropriate, or leave as is if you can't determine.
+    4. Ignore preparation steps or instructions. Focus only on the materials needed.
+    5. If there are multiple sections (e.g., "Dough", "Filling"), combine all ingredients into a single flat list.
+
+    Raw Text:
+    """
+    ${text}
+    """`,
     config: {
       responseMimeType: "application/json",
       responseSchema: {
@@ -43,7 +57,7 @@ export const parseRecipeFromText = async (text: string): Promise<any> => {
   }
 };
 
-// Fix: Implemented parseRecipeFromImage using Gemini AI vision capabilities with structured output.
+// Parse recipe from image
 export const parseRecipeFromImage = async (base64Image: string): Promise<any> => {
   const imagePart = {
     inlineData: {

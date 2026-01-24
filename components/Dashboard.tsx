@@ -25,36 +25,172 @@ const PRESET_RECIPES = [
     ]
   },
   {
-    name: "Galletas Chispas Chocolate",
+    name: "Pan Cubano",
     ingredients: [
-      { name: "Harina", quantity: 300, unit: "g" },
-      { name: "Azúcar Mascabado", quantity: 150, unit: "g" },
-      { name: "Mantequilla", quantity: 150, unit: "g" },
-      { name: "Chispas de Chocolate", quantity: 150, unit: "g" },
-      { name: "Huevo", quantity: 1, unit: "u" }
+      { name: "Harina todo uso sin blanquear", quantity: 4, unit: "taza" },
+      { name: "Azúcar", quantity: 4, unit: "cdita" },
+      { name: "Sal", quantity: 2, unit: "cdita" },
+      { name: "Levadura seca activa", quantity: 2.25, unit: "cdita" },
+      { name: "Mantequilla o manteca", quantity: 4, unit: "cda" },
+      { name: "Agua", quantity: 1.25, unit: "taza" }
     ]
   },
   {
-    name: "Pan de Molde Blanco",
+    name: "Gaceñiga",
     ingredients: [
-      { name: "Harina de Fuerza", quantity: 500, unit: "g" },
-      { name: "Agua", quantity: 300, unit: "ml" },
-      { name: "Sal", quantity: 10, unit: "g" },
-      { name: "Levadura Seca", quantity: 7, unit: "g" },
-      { name: "Aceite", quantity: 30, unit: "ml" }
+      { name: "Harina", quantity: 2, unit: "taza" },
+      { name: "Huevos", quantity: 5, unit: "u" },
+      { name: "Azúcar", quantity: 1, unit: "taza" },
+      { name: "Mantequilla (derretida)", quantity: 0.5, unit: "taza" },
+      { name: "Leche", quantity: 0.5, unit: "taza" },
+      { name: "Vainilla", quantity: 1, unit: "cdita" },
+      { name: "Polvo de hornear", quantity: 1, unit: "cdita" },
+      { name: "Bicarbonato", quantity: 1, unit: "cdita" },
+      { name: "Sal", quantity: 1, unit: "pizca" },
+      { name: "Pasas", quantity: 50, unit: "g" }
+    ]
+  },
+  {
+    name: "Marquesitas Cubanas",
+    ingredients: [
+      { name: "Harina", quantity: 1, unit: "taza" },
+      { name: "Huevos", quantity: 10, unit: "u" },
+      { name: "Azúcar", quantity: 2, unit: "taza" },
+      { name: "Dulce de guayaba (barrita)", quantity: 1, unit: "u" },
+      { name: "Vainilla", quantity: 1, unit: "cda" },
+      { name: "Polvo de hornear", quantity: 1, unit: "cdita" },
+      { name: "Sal", quantity: 1, unit: "pizca" }
+    ]
+  },
+  {
+    name: "Panetela de Piña",
+    ingredients: [
+      { name: "Harina de pan", quantity: 2, unit: "taza" },
+      { name: "Dulce de piña (lata)", quantity: 1, unit: "u" },
+      { name: "Huevos", quantity: 4, unit: "u" },
+      { name: "Leche", quantity: 1, unit: "taza" },
+      { name: "Azúcar", quantity: 1, unit: "taza" },
+      { name: "Mantequilla", quantity: 0.5, unit: "taza" },
+      { name: "Vainilla", quantity: 1, unit: "cdita" },
+      { name: "Polvo de hornear", quantity: 1, unit: "cdita" },
+      { name: "Sal", quantity: 1, unit: "cdita" }
+    ]
+  },
+  {
+    name: "Crema Frita",
+    ingredients: [
+      { name: "Harina de trigo", quantity: 2, unit: "taza" },
+      { name: "Leche", quantity: 500, unit: "ml" },
+      { name: "Huevos", quantity: 8, unit: "u" },
+      { name: "Azúcar", quantity: 6, unit: "cda" },
+      { name: "Mantequilla", quantity: 1, unit: "cda" },
+      { name: "Galletas molidas", quantity: 2, unit: "u" },
+      { name: "Limón", quantity: 1, unit: "u" },
+      { name: "Aceite para freír", quantity: 250, unit: "ml" },
+      { name: "Sal", quantity: 1, unit: "pizca" }
+    ]
+  },
+  {
+    name: "Buñuelos de Viento",
+    ingredients: [
+      { name: "Harina de pan", quantity: 0.5, unit: "lb" },
+      { name: "Huevos", quantity: 3, unit: "u" },
+      { name: "Azúcar (masa)", quantity: 2, unit: "cda" },
+      { name: "Azúcar (almíbar)", quantity: 1, unit: "lb" },
+      { name: "Mantequilla", quantity: 1, unit: "cda" },
+      { name: "Agua (masa)", quantity: 500, unit: "ml" },
+      { name: "Agua (almíbar)", quantity: 2, unit: "taza" },
+      { name: "Aceite para freír", quantity: 250, unit: "ml" }
+    ]
+  },
+  {
+    name: "Leche Frita",
+    ingredients: [
+      { name: "Harina de trigo", quantity: 4, unit: "cda" },
+      { name: "Leche", quantity: 1, unit: "l" }, 
+      { name: "Pan rallado", quantity: 12, unit: "cda" },
+      { name: "Mantequilla", quantity: 4, unit: "cda" },
+      { name: "Azúcar", quantity: 6, unit: "cda" },
+      { name: "Huevo", quantity: 1, unit: "u" },
+      { name: "Galletas molidas", quantity: 2, unit: "u" },
+      { name: "Aceite para freír", quantity: 250, unit: "ml" }
+    ]
+  },
+  {
+    name: "Turrón de Doña Pepa",
+    ingredients: [
+      { name: "Harina de trigo", quantity: 460, unit: "g" },
+      { name: "Mantequilla", quantity: 55, unit: "g" },
+      { name: "Aceite o manteca", quantity: 55, unit: "g" },
+      { name: "Ajonjolí", quantity: 2, unit: "cda" },
+      { name: "Maní", quantity: 0.25, unit: "taza" },
+      { name: "Anís", quantity: 1, unit: "cdita" },
+      { name: "Azúcar", quantity: 460, unit: "g" },
+      { name: "Naranja", quantity: 1, unit: "u" },
+      { name: "Piña (rodajas)", quantity: 2, unit: "u" },
+      { name: "Canela", quantity: 1, unit: "u" },
+      { name: "Clavo de olor", quantity: 1, unit: "u" },
+      { name: "Limones", quantity: 4, unit: "u" },
+      { name: "Agua", quantity: 0.25, unit: "taza" }
+    ]
+  },
+  {
+    name: "Buñuelos de Navidad",
+    ingredients: [
+      { name: "Harina de pan", quantity: 250, unit: "g" },
+      { name: "Yuca pequeña", quantity: 1, unit: "u" },
+      { name: "Malanga", quantity: 1, unit: "u" },
+      { name: "Boniato/Bonito pequeño", quantity: 1, unit: "u" },
+      { name: "Huevo", quantity: 1, unit: "u" },
+      { name: "Vino", quantity: 0.25, unit: "taza" },
+      { name: "Anís", quantity: 5, unit: "g" },
+      { name: "Azúcar", quantity: 300, unit: "g" },
+      { name: "Aceite", quantity: 0.5, unit: "taza" },
+      { name: "Agua", quantity: 0.5, unit: "taza" },
+      { name: "Canela", quantity: 1, unit: "u" },
+      { name: "Limón", quantity: 1, unit: "u" }
+    ]
+  },
+  {
+    name: "Panetela Borracha",
+    ingredients: [
+      { name: "Maicena", quantity: 95, unit: "g" },
+      { name: "Harina todo uso", quantity: 20, unit: "g" },
+      { name: "Yemas de huevo", quantity: 12, unit: "u" },
+      { name: "Huevo entero", quantity: 1, unit: "u" },
+      { name: "Azúcar (masa)", quantity: 55, unit: "g" },
+      { name: "Azúcar (almíbar)", quantity: 2, unit: "taza" },
+      { name: "Agua", quantity: 1, unit: "taza" },
+      { name: "Ron blanco", quantity: 0.25, unit: "taza" },
+      { name: "Limón (cáscara)", quantity: 0.5, unit: "u" },
+      { name: "Vainilla", quantity: 4, unit: "cdita" },
+      { name: "Sal", quantity: 0.5, unit: "cdita" }
     ]
   }
 ];
 
 const generateRecipeImage = (name: string) => {
+  const n = name.toLowerCase();
+  
+  let emoji = '🧁'; 
+  if (n.includes('panetela') || n.includes('bizcocho')) emoji = '🍰';
+  else if (n.includes('galleta')) emoji = '🍪';
+  else if (n.includes('pan')) emoji = '🍞';
+  else if (n.includes('gaceñiga')) emoji = '🍞';
+  else if (n.includes('marquesitas')) emoji = '🥮';
+  else if (n.includes('piña')) emoji = '🍍';
+  else if (n.includes('turrón')) emoji = '🍬';
+  else if (n.includes('buñuelos')) emoji = '🥯';
+  else if (n.includes('frita')) emoji = '🥘';
+  else if (n.includes('leche')) emoji = '🥛';
+  else if (n.includes('chocolate')) emoji = '🍫';
+
   const colors = ['#FECACA', '#FED7AA', '#FDE68A', '#A7F3D0', '#BFDBFE', '#DDD6FE', '#FBCFE8'];
-  const emojis = ['🎂', '🧁', '🍰', '🍪', '🍩', '🥯', '🍞', '🥐', '🥨', '🥞'];
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   const colorIndex = Math.abs(hash) % colors.length;
-  const emojiIndex = Math.abs(hash) % emojis.length;
   const bgColor = colors[colorIndex];
-  const emoji = emojis[emojiIndex];
+  
   const svgString = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 100 100"><rect width="100%" height="100%" fill="${bgColor}" /><text x="50%" y="55%" font-size="50" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif">${emoji}</text></svg>`;
   return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`;
 };
@@ -75,6 +211,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [batchSize, setBatchSize] = useState(1);
   const [notes, setNotes] = useState('');
   const [inputText, setInputText] = useState('');
+  const [isParsing, setIsParsing] = useState(false);
   
   const [tempIngName, setTempIngName] = useState('');
   const [tempIngQty, setTempIngQty] = useState('');
@@ -83,6 +220,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showNotesModal, setShowNotesModal] = useState<Recipe | null>(null);
   
   const topRef = useRef<HTMLDivElement>(null);
+
+  const parseWithGemini = async () => {
+    setIsParsing(true);
+    try {
+      const { parseRecipeFromText } = await import('../services/geminiService');
+      const result = await parseRecipeFromText(inputText);
+      
+      if (result) {
+        setManualName(result.name || "Nueva Receta");
+        setManualIngredients(result.ingredients || []);
+        setInputMode('MANUAL');
+        setInputText('');
+      }
+    } catch (e) {
+      alert("Error al analizar el texto. Intenta usar un formato más claro o ingresa manualmente.");
+      console.error(e);
+    } finally {
+      setIsParsing(false);
+    }
+  };
 
   const handleAddOrUpdateIngredient = () => {
     if (tempIngName && tempIngQty) {
@@ -154,43 +311,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setShowNotesModal(recipe);
   };
 
-  const parseFromText = () => {
-    const lines = inputText.split('\n');
-    const ingredients: Ingredient[] = [];
-    
-    // Regex flexible para: "Cantidad Unidad Ingrediente" o "Ingrediente: Cantidad Unidad"
-    const regex = /(-?\d+[.,]?\d*)\s*([a-zA-Záéíóúñ]+)?\s+(.+)/i;
-    const regexReverse = /(.+):\s*(-?\d+[.,]?\d*)\s*([a-zA-Záéíóúñ]+)?/i;
-
-    lines.forEach(line => {
-      let m = line.match(regex);
-      if (m) {
-        ingredients.push({
-          name: m[3].trim(),
-          quantity: parseFloat(m[1].replace(',', '.')),
-          unit: m[2] || 'u'
-        });
-      } else {
-        m = line.match(regexReverse);
-        if (m) {
-          ingredients.push({
-            name: m[1].trim(),
-            quantity: parseFloat(m[2].replace(',', '.')),
-            unit: m[3] || 'u'
-          });
-        }
-      }
-    });
-
-    if (ingredients.length > 0) {
-      setManualIngredients(prev => [...prev, ...ingredients]);
-      setInputMode('MANUAL');
-      setInputText('');
-    } else {
-      alert(t.noIngredientsDetected);
-    }
-  };
-
   const addPreset = (preset: any) => {
     const newRecipe: Recipe = {
       id: Date.now().toString(),
@@ -260,7 +380,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {inputMode === 'TEXT' && (
               <div className="space-y-4">
                 <textarea placeholder={t.pasteRecipeHint} className="w-full p-4 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 min-h-[150px] dark:text-white focus:outline-none focus:border-amber-500" value={inputText} onChange={e => setInputText(e.target.value)}></textarea>
-                <button onClick={parseFromText} disabled={!inputText.trim()} className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 disabled:opacity-50 transition-all">{t.analyzeCosts}</button>
+                <button onClick={parseWithGemini} disabled={!inputText.trim() || isParsing} className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold hover:bg-amber-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                   {isParsing ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div> : <Icons.Chef size={20} />}
+                   {t.analyzeCosts}
+                </button>
                 <p className="text-[10px] text-stone-400 text-center italic">{t.flexibleFormats}</p>
               </div>
             )}
@@ -281,22 +404,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4 flex items-center gap-2"><Icons.Library size={20} className="text-amber-600" /> {t.savedRecipes}</h2>
           <div className="grid gap-4">
             {recipes.map((recipe) => (
-              <div key={recipe.id} onClick={() => onSelectRecipe(recipe)} className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex items-center gap-4 cursor-pointer hover:border-amber-200 transition group relative overflow-hidden">
+              <div key={recipe.id} onClick={() => onSelectRecipe(recipe)} className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex gap-4 cursor-pointer hover:border-amber-200 transition group relative overflow-hidden">
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-stone-100 shrink-0"><img src={recipe.imageUrl || generateRecipeImage(recipe.name)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={recipe.name} /></div>
-                <div className="flex-1 min-w-0 pr-10">
-                  <h3 className="font-bold text-stone-900 dark:text-white truncate text-base">{recipe.name}</h3>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1">
-                    <span className={`w-1.5 h-1.5 rounded-full ${recipe.mode === 'BATCH' ? 'bg-orange-400' : 'bg-green-400'}`}></span>
-                    {recipe.ingredients.length} {t.ingredientsCount} • {recipe.mode === 'BATCH' ? `${t.batchMode} (${recipe.batchSize}u)` : t.singleMode}
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <button onClick={(e) => handleShare(e, recipe)} className="p-1.5 bg-stone-100 dark:bg-stone-800 rounded-lg text-stone-500 hover:text-green-500 transition" title={t.share}><Icons.Globe size={14}/></button>
-                    <button onClick={(e) => handleShowNotes(e, recipe)} className="p-1.5 bg-stone-100 dark:bg-stone-800 rounded-lg text-stone-500 hover:text-blue-500 transition" title={t.notes}><Icons.Help size={14}/></button>
+                
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                  <div>
+                      <h3 className="font-bold text-stone-900 dark:text-white truncate text-base">{recipe.name}</h3>
+                      <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1 mb-2">
+                        <span className={`w-1.5 h-1.5 rounded-full ${recipe.mode === 'BATCH' ? 'bg-orange-400' : 'bg-green-400'}`}></span>
+                        {recipe.ingredients.length} {t.ingredientsCount} • {recipe.mode === 'BATCH' ? `${t.batchMode} (${recipe.batchSize}u)` : t.singleMode}
+                      </p>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 relative z-10">
-                  <button onClick={(e) => handleStartEdit(e, recipe)} className="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 dark:bg-stone-800 text-stone-500 hover:text-amber-600 dark:hover:text-amber-400 transition" title={t.edit}><Icons.Edit size={16} /></button>
-                  <button onClick={(e) => {e.stopPropagation(); if(confirm(t.confirmDelete)) onDeleteRecipe?.(recipe.id); }} className="w-9 h-9 flex items-center justify-center rounded-xl bg-stone-50 dark:bg-stone-800 text-stone-500 hover:text-red-600 dark:hover:text-red-400 transition" title={t.delete}><Icons.Trash size={16} /></button>
+
+                  <div className="flex items-center gap-2 mt-auto">
+                    <button onClick={(e) => handleShare(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-green-600 transition" title={t.share}><Icons.Share size={16}/></button>
+                    <button onClick={(e) => handleShowNotes(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-blue-500 transition" title={t.notes}><Icons.Help size={16}/></button>
+                    
+                    <div className="w-px h-4 bg-stone-200 dark:bg-stone-700 mx-1"></div>
+                    
+                    <button onClick={(e) => handleStartEdit(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-amber-600 transition" title={t.edit}><Icons.Edit size={16} /></button>
+                    <button onClick={(e) => {e.stopPropagation(); if(confirm(t.confirmDelete)) onDeleteRecipe?.(recipe.id); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-red-500 transition" title={t.delete}><Icons.Trash size={16} /></button>
+                  </div>
                 </div>
               </div>
             ))}
