@@ -219,7 +219,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [manualName, setManualName] = useState('');
   const [manualIngredients, setManualIngredients] = useState<Ingredient[]>([]);
   const [productionMode, setProductionMode] = useState<ProductionMode>('SINGLE');
-  const [batchSize, setBatchSize] = useState(1);
+  // Change batchSize type to allow empty string for input placeholder logic
+  const [batchSize, setBatchSize] = useState<number | ''>(''); 
   const [notes, setNotes] = useState('');
   const [inputText, setInputText] = useState('');
   const [isParsing, setIsParsing] = useState(false);
@@ -271,6 +272,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const handleManualSave = () => {
     if (manualName && manualIngredients.length > 0) {
+      // Ensure batchSize has a valid number for the recipe object
+      const finalBatchSize = (batchSize === '' || batchSize <= 0) ? 1 : batchSize;
+
       const recipeToSave: Recipe = {
         id: editingId || Date.now().toString(),
         name: manualName,
@@ -278,7 +282,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         imageUrl: generateRecipeImage(manualName),
         createdAt: editingId ? (recipes.find(r => r.id === editingId)?.createdAt || Date.now()) : Date.now(),
         mode: productionMode,
-        batchSize: productionMode === 'BATCH' ? batchSize : 1,
+        batchSize: productionMode === 'BATCH' ? finalBatchSize : 1,
         notes: notes,
         profitMargin: editingId ? (recipes.find(r => r.id === editingId)?.profitMargin || 25) : 25
       };
@@ -293,7 +297,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setManualIngredients([]);
       setEditingId(null);
       setNotes('');
-      setBatchSize(1);
+      setBatchSize('');
       setProductionMode('SINGLE');
     }
   };
@@ -305,7 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setEditingId(recipe.id);
     setNotes(recipe.notes || '');
     setProductionMode(recipe.mode || 'SINGLE');
-    setBatchSize(recipe.batchSize || 1);
+    setBatchSize(recipe.batchSize || '');
     setInputMode('MANUAL');
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -361,7 +365,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {productionMode === 'BATCH' && (
                    <div className="animate-in fade-in slide-in-from-top-1">
                      <label className="text-xs font-bold text-stone-400 uppercase mb-1 block">{t.batchSize}</label>
-                     <input type="number" className="w-full p-2 bg-stone-50 dark:bg-stone-700 rounded-lg border border-stone-200 dark:border-stone-600 dark:text-white" value={batchSize} onChange={e => setBatchSize(parseInt(e.target.value) || 1)} />
+                     <input 
+                       type="number" 
+                       placeholder="1"
+                       className="w-full p-2 bg-stone-50 dark:bg-stone-700 rounded-lg border border-stone-200 dark:border-stone-600 dark:text-white placeholder-stone-300 dark:placeholder-stone-600" 
+                       value={batchSize} 
+                       onChange={e => setBatchSize(e.target.value === '' ? '' : parseInt(e.target.value))} 
+                     />
                    </div>
                 )}
 

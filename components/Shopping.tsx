@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem } from '../types';
 import { calculateIngredientCost, normalizeKey, convertUnit } from '../utils/units';
@@ -20,10 +20,36 @@ interface ShoppingItem {
 }
 
 export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
-  const [selectedRecipes, setSelectedRecipes] = useState<{ recipeId: string; count: number }[]>([]);
+  // Initialize state from localStorage if available
+  const [selectedRecipes, setSelectedRecipes] = useState<{ recipeId: string; count: number }[]>(() => {
+    const saved = localStorage.getItem('hornefin_shopping_recipes');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [stock, setStock] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('hornefin_shopping_stock');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  const [unitOverrides, setUnitOverrides] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('hornefin_shopping_units');
+    return saved ? JSON.parse(saved) : {};
+  });
+
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
-  const [stock, setStock] = useState<Record<string, number>>({});
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, string>>({});
+
+  // Persist state changes
+  useEffect(() => {
+    localStorage.setItem('hornefin_shopping_recipes', JSON.stringify(selectedRecipes));
+  }, [selectedRecipes]);
+
+  useEffect(() => {
+    localStorage.setItem('hornefin_shopping_stock', JSON.stringify(stock));
+  }, [stock]);
+
+  useEffect(() => {
+    localStorage.setItem('hornefin_shopping_units', JSON.stringify(unitOverrides));
+  }, [unitOverrides]);
 
   const addRecipe = () => {
       if (!selectedRecipeId) return;
@@ -105,6 +131,82 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
   }, [selectedRecipes, recipes, pantry, stock, unitOverrides]);
 
   const totalCost = shoppingList.reduce((acc, item) => acc + item.cost, 0);
+
+  const handleExportDoc = () => {
+    if (shoppingList.length === 0) return;
+
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Lista de Compras HorneFin</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+      </style>
+      </head><body>
+      <h1>Lista de Compras</h1>
+      <p>Generado: ${new Date().toLocaleDateString()}</p>
+      
+      <h3>Para la producción de:</h3>
+      <ul>
+        ${selectedRecipes.map(sel => {
+            const r = recipes.find(x => x.id === sel.recipeId);
+            return `<li>${r ? r.name : 'Desconocido'} (x${sel.count})</li>`;
+        }).join('')}
+      </ul>
+
+      <table>
+        <thead><tr><th>Ingrediente</th><th>Falta</th><th>Costo Est.</th></tr></thead>
+        <tbody>
+          ${shoppingList.filter(i => i.needToBuy > 0).map(item => `
+            <tr>
+              <td>${item.originalName}</td>
+              <td>${item.needToBuy.toFixed(2)} ${item.unit}</td>
+              <td>$${item.cost.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+        <tfoot>
+           <tr>
+             <td colspan="2"><strong>Total Estimado</strong></td>
+             <td><strong>$${totalCost.toFixed(2)}</strong></td>
+           </tr>
+        </tfoot>
+      </table>
+      </body></html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Lista_Compras_${new Date().toISOString().slice(0, 10)}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleWhatsApp = () => {
+    if (shoppingList.length === 0) return;
+
+    let text = `*Lista de Compras - HorneFin*\n\n`;
+    text += `*Producción:*\n`;
+    selectedRecipes.forEach(sel => {
+        const r = recipes.find(x => x.id === sel.recipeId);
+        if(r) text += `- ${r.name} (x${sel.count})\n`;
+    });
+
+    text += `\n*Necesitas Comprar:*\n`;
+    shoppingList.filter(i => i.needToBuy > 0).forEach(item => {
+        text += `[ ] ${item.needToBuy.toFixed(2)} ${item.unit} ${item.originalName}\n`;
+    });
+
+    text += `\n*Costo Est:* $${totalCost.toFixed(2)}`;
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
 
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
@@ -214,8 +316,8 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
 
           {shoppingList.length > 0 && (
               <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-5">
-                  <button className="py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm border dark:border-stone-700 hover:bg-stone-50"><Icons.File size={18} /> {t.exportList}</button>
-                  <button className="py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-100 hover:bg-orange-600 transition-transform active:scale-95"><Icons.Globe size={18} /> WhatsApp</button>
+                  <button onClick={handleExportDoc} className="py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm border dark:border-stone-700 hover:bg-stone-50"><Icons.File size={18} /> {t.exportList}</button>
+                  <button onClick={handleWhatsApp} className="py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-100 hover:bg-orange-600 transition-transform active:scale-95"><Icons.Globe size={18} /> WhatsApp</button>
               </div>
           )}
       </div>

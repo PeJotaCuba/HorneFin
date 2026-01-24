@@ -46,14 +46,66 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
 
   const COLORS = ['#DC2626', '#EA580C', '#D97706', '#CA8A04', '#65A30D', '#57534E'];
 
+  const exportSummaryDoc = () => {
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Resumen Financiero Global</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+      </style>
+      </head><body>
+      <h1>Resumen Financiero - HorneFin</h1>
+      <p>Fecha: ${new Date().toLocaleDateString()}</p>
+      
+      <h2>Totales Globales (Proyección)</h2>
+      <ul>
+        <li><strong>Costos Totales:</strong> $${totalCosts.toFixed(2)}</li>
+        <li><strong>Ingresos Estimados:</strong> $${totalRevenue.toFixed(2)}</li>
+        <li><strong>Ganancia Neta Potencial:</strong> $${totalProfit.toFixed(2)}</li>
+      </ul>
+      <p><em>* Calculado asumiendo la venta de 1 unidad/lote de cada receta activa.</em></p>
+
+      <h2>Distribución de Costos (Top Insumos)</h2>
+      <table>
+        <thead><tr><th>Ingrediente</th><th>Costo Acumulado</th></tr></thead>
+        <tbody>
+          ${pieData.map(item => `
+            <tr>
+              <td>${item.name}</td>
+              <td>$${item.value.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </body></html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `HorneFin_Resumen_${new Date().toISOString().slice(0, 10)}.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
-        <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-          <span className="bg-red-600 text-white p-1 rounded-lg"><Icons.PieChart size={18} /></span>
-          {t.summaryTitle}
-        </h1>
-        <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.summarySubtitle}</p>
+      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex justify-between items-center">
+        <div>
+          <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+            <span className="bg-red-600 text-white p-1 rounded-lg"><Icons.PieChart size={18} /></span>
+            {t.summaryTitle}
+          </h1>
+          <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.summarySubtitle}</p>
+        </div>
+        <button onClick={exportSummaryDoc} className="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition" title="Exportar Resumen">
+           <Icons.Download size={20} />
+        </button>
       </div>
 
       <div className="p-4 space-y-6">

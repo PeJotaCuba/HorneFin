@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Icons } from './Icons';
-import { Recipe, PantryItem } from '../types';
+import { Recipe, PantryItem, ProductionMode } from '../types';
 import { calculateIngredientCost, getDefaultUnit, normalizeKey } from '../utils/units';
 
 interface CostAnalysisProps {
@@ -23,12 +23,14 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   t 
 }) => {
   const [showPantryForm, setShowPantryForm] = useState(initialEditMode);
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [editedName, setEditedName] = useState(recipe.name);
   // Margen inicial 25% si no tiene uno guardado
   const [desiredMargin, setDesiredMargin] = useState(recipe.profitMargin || 25);
   const [pantryFormValues, setPantryFormValues] = useState<Record<string, PantryItem>>({});
   const [otherExpenses, setOtherExpenses] = useState<string>(recipe.otherExpenses?.toString() || '');
+  
+  // State for Batch Size Modal
+  const [showBatchModal, setShowBatchModal] = useState(false);
+  const [tempBatchSize, setTempBatchSize] = useState<number>(recipe.batchSize || 1);
 
   useEffect(() => {
     const initialForm: Record<string, PantryItem> = {};
@@ -72,6 +74,22 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     setShowPantryForm(false);
   };
 
+  const handleModeToggle = () => {
+    if (recipe.mode === 'BATCH') {
+      // Switch to SINGLE
+      onUpdateRecipe({ ...recipe, mode: 'SINGLE', batchSize: 1 });
+    } else {
+      // Switch to BATCH (Open Modal)
+      setTempBatchSize(recipe.batchSize || 1);
+      setShowBatchModal(true);
+    }
+  };
+
+  const saveBatchMode = () => {
+    onUpdateRecipe({ ...recipe, mode: 'BATCH', batchSize: tempBatchSize > 0 ? tempBatchSize : 1 });
+    setShowBatchModal(false);
+  };
+
   const calculations = useMemo(() => {
     let totalMaterialsCost = 0;
     const ingredientBreakdown = recipe.ingredients.map(ing => {
@@ -92,6 +110,72 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
     return { totalMaterialsCost, totalRecipeCost, ingredientBreakdown, costPerItem, suggestedPrice, extras };
   }, [recipe, pantry, pantryFormValues, desiredMargin]);
 
+  const exportToDoc = () => {
+    const content = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Reporte de Costos - ${recipe.name}</title>
+      <style>
+        body { font-family: 'Arial', sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .header { margin-bottom: 20px; }
+        .total { font-weight: bold; font-size: 1.2em; }
+      </style>
+      </head><body>
+      <div class="header">
+        <h1>${recipe.name}</h1>
+        <p>Generado por HorneFin</p>
+        <p><strong>Modo:</strong> ${recipe.mode === 'BATCH' ? `Por Lote (${recipe.batchSize} unidades)` : 'Por Unidad'}</p>
+        <p><strong>Margen Deseado:</strong> ${desiredMargin}%</p>
+      </div>
+
+      <h2>Resumen Financiero</h2>
+      <ul>
+        <li><strong>Costo de Producción:</strong> $${calculations.costPerItem.toFixed(2)}</li>
+        <li><strong>Precio Sugerido:</strong> $${calculations.suggestedPrice.toFixed(2)}</li>
+        <li><strong>Ganancia Estimada:</strong> $${(calculations.suggestedPrice - calculations.costPerItem).toFixed(2)}</li>
+      </ul>
+
+      <h2>Desglose de Ingredientes</h2>
+      <table>
+        <thead><tr><th>Ingrediente</th><th>Cantidad</th><th>Costo</th></tr></thead>
+        <tbody>
+          ${calculations.ingredientBreakdown.map(item => `
+            <tr>
+              <td>${item.name}</td>
+              <td>${item.quantity} ${item.unit}</td>
+              <td>$${item.cost.toFixed(2)}</td>
+            </tr>
+          `).join('')}
+          ${calculations.extras > 0 ? `
+            <tr>
+              <td>Otros Gastos</td>
+              <td>-</td>
+              <td>$${calculations.extras.toFixed(2)}</td>
+            </tr>
+          ` : ''}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2" class="total">Costo Total Receta</td>
+            <td class="total">$${calculations.totalRecipeCost.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+      </body></html>
+    `;
+
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${recipe.name}_Costos.doc`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
       {showPantryForm ? (
@@ -101,7 +185,6 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             <button onClick={() => setShowPantryForm(false)} className="p-2 text-stone-400"><Icons.Close /></button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Fix: Cast Object.values(pantryFormValues) to PantryItem[] to resolve 'unknown' type errors. */}
             {(Object.values(pantryFormValues) as PantryItem[]).map((item, idx) => (
               <div key={idx} className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-sm">
                 <p className="font-bold mb-3 capitalize text-stone-800 dark:text-white">{item.name}</p>
@@ -158,7 +241,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
           <div className="bg-white dark:bg-stone-900 p-4 shadow-sm flex items-center justify-between border-b dark:border-stone-800 sticky top-0 z-20 no-print">
             <button onClick={onBack} className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition"><Icons.Back className="text-stone-600 dark:text-stone-400"/></button>
             <h1 className="font-bold truncate text-stone-900 dark:text-white mx-2">{recipe.name}</h1>
-            <button onClick={() => setShowPantryForm(true)} className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 rounded-xl hover:bg-amber-100 transition"><Icons.Edit size={20}/></button>
+            <div className="w-10"></div> {/* Placeholder to balance title since edit button was removed */}
           </div>
 
           <div className="p-4 space-y-6">
@@ -191,10 +274,11 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                           <p className="text-[10px] uppercase text-stone-500 font-bold mb-1">{t.profit} {recipe.mode === 'BATCH' ? `(${t.single})` : ''}</p>
                           <p className="text-xl font-bold text-amber-300 print:text-amber-700">${(calculations.suggestedPrice - calculations.costPerItem).toFixed(2)}</p>
                        </div>
-                       <div className="bg-stone-800/50 dark:bg-stone-900/30 p-3 rounded-xl text-right">
+                       <button onClick={handleModeToggle} className="bg-stone-800/50 dark:bg-stone-900/30 p-3 rounded-xl text-right hover:bg-stone-700 transition relative group">
                           <p className="text-[10px] uppercase text-stone-500 font-bold mb-1">{t.reportMode}</p>
                           <p className="text-sm font-bold text-stone-300 truncate">{recipe.mode === 'BATCH' ? `${t.batchMode} (${recipe.batchSize}u)` : t.singleMode}</p>
-                       </div>
+                          <span className="absolute top-2 right-2 text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Edit size={12}/></span>
+                       </button>
                     </div>
                  </div>
                </div>
@@ -203,7 +287,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             <div className="bg-white dark:bg-stone-900 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 overflow-hidden print:border-stone-300">
                <div className="p-4 bg-stone-50 dark:bg-stone-800/50 border-b dark:border-stone-800 flex justify-between items-center print:bg-stone-50">
                   <span className="font-bold text-stone-700 dark:text-stone-300 uppercase text-xs tracking-wider">{t.costBreakdown}</span>
-                  <span className="text-[10px] text-stone-400">{t.basedOn}</span>
+                  <div className="flex gap-2">
+                      <button onClick={exportToDoc} className="p-1.5 text-stone-400 hover:text-stone-800 dark:hover:text-stone-200" title={t.printPdf}>
+                        <Icons.Download size={16} />
+                      </button>
+                      <span className="text-[10px] text-stone-400 self-center">{t.basedOn}</span>
+                  </div>
                </div>
                <div className="divide-y divide-stone-50 dark:divide-stone-800">
                   {calculations.ingredientBreakdown.map((item, i) => (
@@ -239,6 +328,29 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
             </div>
           </div>
         </>
+      )}
+
+      {/* Batch Mode Modal */}
+      {showBatchModal && (
+        <div className="fixed inset-0 z-[150] bg-black/60 flex items-center justify-center p-6 backdrop-blur-sm animate-in fade-in">
+           <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
+              <h3 className="font-bold text-lg text-stone-900 dark:text-white mb-2">{t.batchMode}</h3>
+              <p className="text-sm text-stone-500 mb-4">Ingresa la cantidad de unidades que salen en esta receta:</p>
+              
+              <input 
+                type="number" 
+                className="w-full p-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold text-center text-xl mb-4 focus:outline-none focus:border-amber-500 dark:text-white"
+                value={tempBatchSize}
+                onChange={(e) => setTempBatchSize(parseInt(e.target.value) || 0)}
+                autoFocus
+              />
+
+              <div className="flex gap-3">
+                 <button onClick={() => setShowBatchModal(false)} className="flex-1 py-3 bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 rounded-xl font-bold">{t.cancel}</button>
+                 <button onClick={saveBatchMode} className="flex-1 py-3 bg-amber-600 text-white rounded-xl font-bold">{t.update}</button>
+              </div>
+           </div>
+        </div>
       )}
     </div>
   );
