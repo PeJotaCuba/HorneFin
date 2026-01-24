@@ -113,9 +113,29 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                        <input type="number" className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg dark:text-white focus:border-amber-500 focus:outline-none" value={item.price || ''} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, price: parseFloat(e.target.value) || 0}})} />
                     </div>
                   </div>
-                  <div className="w-24">
+                  <div className="w-20">
                     <label className="text-[10px] font-bold text-stone-400 uppercase">{t.qty}</label>
                     <input type="number" className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-amber-500 focus:outline-none" value={item.quantity || ''} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, quantity: parseFloat(e.target.value) || 0}})} />
+                  </div>
+                  <div className="w-24">
+                     <label className="text-[10px] font-bold text-stone-400 uppercase">{t.unit}</label>
+                     <select 
+                        className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-sm dark:text-white focus:border-amber-500 focus:outline-none appearance-none"
+                        value={item.unit}
+                        onChange={(e) => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, unit: e.target.value}})}
+                      >
+                        <option value="kg">kg</option>
+                        <option value="lb">lb</option>
+                        <option value="g">g</option>
+                        <option value="ml">ml</option>
+                        <option value="l">l</option>
+                        <option value="oz">oz</option>
+                        <option value="u">u</option>
+                        <option value="file">file</option>
+                        <option value="cda">cda</option>
+                        <option value="cdita">cdita</option>
+                        <option value="taza">taza</option>
+                     </select>
                   </div>
                 </div>
               </div>
