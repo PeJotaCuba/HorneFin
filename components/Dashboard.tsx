@@ -253,6 +253,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
+  const handleEditIngredient = (index: number) => {
+    const ing = manualIngredients[index];
+    setTempIngName(ing.name);
+    setTempIngQty(ing.quantity.toString());
+    setTempIngUnit(ing.unit);
+    setEditingIngIndex(index);
+  };
+
+  const handleCancelEditIngredient = () => {
+    setTempIngName('');
+    setTempIngQty('');
+    setTempIngUnit('g');
+    setEditingIngIndex(null);
+  };
+
   const handleAddOrUpdateIngredient = () => {
     if (tempIngName && tempIngQty) {
       const newIng = { name: tempIngName, quantity: parseFloat(tempIngQty), unit: tempIngUnit };
@@ -299,6 +314,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       setNotes('');
       setBatchSize('');
       setProductionMode('SINGLE');
+      handleCancelEditIngredient();
     }
   };
 
@@ -311,6 +327,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     setProductionMode(recipe.mode || 'SINGLE');
     setBatchSize(recipe.batchSize || '');
     setInputMode('MANUAL');
+    handleCancelEditIngredient();
     topRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
@@ -382,14 +399,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="u">u</option><option value="cda">cda</option><option value="cdita">cdita</option><option value="taza">taza</option>
                   </select>
                 </div>
-                <button onClick={handleAddOrUpdateIngredient} className="w-full py-2 bg-stone-200 dark:bg-stone-700 rounded-lg text-sm font-bold text-stone-700 dark:text-stone-300 hover:bg-stone-300 transition">{editingIngIndex !== null ? t.update : t.add}</button>
+                
+                <div className="flex gap-2">
+                   <button onClick={handleAddOrUpdateIngredient} className="flex-grow py-2 bg-stone-200 dark:bg-stone-700 rounded-lg text-sm font-bold text-stone-700 dark:text-stone-300 hover:bg-stone-300 transition">{editingIngIndex !== null ? t.update : t.add}</button>
+                   {editingIngIndex !== null && (
+                       <button onClick={handleCancelEditIngredient} className="w-12 py-2 bg-stone-100 dark:bg-stone-800 rounded-lg text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center" title={t.cancel}>
+                           <Icons.Close size={18} />
+                       </button>
+                   )}
+                </div>
                 
                 {manualIngredients.length > 0 && (
                    <div className="space-y-1 max-h-40 overflow-y-auto pr-2">
                      {manualIngredients.map((ing, i) => (
-                       <div key={i} className="flex justify-between items-center text-xs p-2 bg-amber-50 dark:bg-amber-900/10 rounded-lg border border-amber-100 dark:border-amber-900/30">
+                       <div key={i} className={`flex justify-between items-center text-xs p-2 rounded-lg border transition-colors ${editingIngIndex === i ? 'bg-amber-100 border-amber-300 dark:bg-amber-900/40 dark:border-amber-700' : 'bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-900/30'}`}>
                           <span className="font-bold text-stone-700 dark:text-stone-300">{ing.quantity}{ing.unit} <span className="capitalize font-normal ml-1">{ing.name}</span></span>
-                          <button onClick={() => setManualIngredients(manualIngredients.filter((_, idx) => idx !== i))} className="text-red-400 p-1"><Icons.Close size={14}/></button>
+                          <div className="flex gap-1">
+                            <button onClick={() => handleEditIngredient(i)} className="text-amber-500 hover:bg-amber-200 dark:hover:bg-amber-800 p-1 rounded transition-colors" title={t.edit}><Icons.Edit size={14}/></button>
+                            <button onClick={() => {
+                                const newList = manualIngredients.filter((_, idx) => idx !== i);
+                                setManualIngredients(newList);
+                                if (editingIngIndex === i) handleCancelEditIngredient();
+                                else if (editingIngIndex !== null && i < editingIngIndex) setEditingIngIndex(editingIngIndex - 1);
+                            }} className="text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 p-1 rounded transition-colors" title={t.delete}><Icons.Trash size={14}/></button>
+                          </div>
                        </div>
                      ))}
                    </div>
