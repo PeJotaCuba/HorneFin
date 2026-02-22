@@ -8,6 +8,7 @@ interface DashboardProps {
   onAddRecipe: (recipe: Recipe) => void;
   onUpdateRecipe?: (recipe: Recipe) => void;
   onDeleteRecipe?: (id: string) => void;
+  onDuplicateRecipe?: (recipe: Recipe) => void;
   t: any;
 }
 
@@ -212,6 +213,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onAddRecipe, 
   onUpdateRecipe,
   onDeleteRecipe,
+  onDuplicateRecipe,
   t
 }) => {
   const [inputMode, setInputMode] = useState<'MANUAL' | 'TEXT' | 'PRESETS'>('MANUAL');
@@ -476,7 +478,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <button onClick={(e) => handleShowNotes(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-blue-500 transition" title={t.notes}><Icons.Help size={16}/></button>
                     
                     <div className="w-px h-4 bg-stone-200 dark:bg-stone-700 mx-1"></div>
-                    
+
+                    <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-purple-500 transition" title={t.duplicate}><Icons.Copy size={16}/></button>
                     <button onClick={(e) => handleStartEdit(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-amber-600 transition" title={t.edit}><Icons.Edit size={16} /></button>
                     <button onClick={(e) => {e.stopPropagation(); if(confirm(t.confirmDelete)) onDeleteRecipe?.(recipe.id); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-red-500 transition" title={t.delete}><Icons.Trash size={16} /></button>
                   </div>

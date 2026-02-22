@@ -31,7 +31,8 @@ import {
   HelpCircle,
   Printer,
   UploadCloud,
-  Share2
+  Share2,
+  Copy
 } from 'lucide-react';
 
 export const Icons = {
@@ -66,5 +67,6 @@ export const Icons = {
   Help: HelpCircle,
   Print: Printer,
   UploadDB: UploadCloud,
-  Share: Share2
+  Share: Share2,
+  Copy
 };

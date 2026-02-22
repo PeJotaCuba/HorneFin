@@ -118,6 +118,17 @@ export default function App() {
     }
   };
 
+  const handleDuplicateRecipe = (recipe: Recipe) => {
+    const newRecipe: Recipe = {
+      ...recipe,
+      id: Date.now().toString(),
+      name: `${recipe.name} (Copia)`,
+      createdAt: Date.now(),
+      hasPricesConfigured: false // Reset prices configuration status for the copy
+    };
+    setRecipes([newRecipe, ...recipes]);
+  };
+
   const handleDeleteRecipe = (id: string) => {
     const updatedRecipes = recipes.filter(r => r.id !== id);
     setRecipes(updatedRecipes);
@@ -187,6 +198,7 @@ export default function App() {
             onUpdateRecipe={handleUpdateRecipe}
             onDeleteRecipe={handleDeleteRecipe}
             onSelectRecipe={handleSelectRecipe}
+            onDuplicateRecipe={handleDuplicateRecipe}
             t={t}
           />
         )}
