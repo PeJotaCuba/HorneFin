@@ -111,8 +111,10 @@ export default function App() {
   };
 
   const handleUpdateRecipe = (updatedRecipe: Recipe) => {
-    const updatedRecipes = recipes.map(r => r.id === updatedRecipe.id ? updatedRecipe : r);
-    setRecipes(updatedRecipes);
+    // Move updated recipe to the top of the list
+    const otherRecipes = recipes.filter(r => r.id !== updatedRecipe.id);
+    setRecipes([updatedRecipe, ...otherRecipes]);
+    
     if (selectedRecipe && selectedRecipe.id === updatedRecipe.id) {
        setSelectedRecipe(updatedRecipe);
     }
