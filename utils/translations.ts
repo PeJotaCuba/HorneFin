@@ -63,6 +63,8 @@ export const TRANSLATIONS = {
     otherExpensesHint: "Importe fijo para esta receta (Luz, Gas, etc.)",
     noPrice: "Sin Precio",
     printPdf: "Exportar Reporte",
+    marginSaved: "Margen fijado por defecto para esta receta",
+    setDefault: "Fijar",
     
     // Reports
     reportTitle: "Reporte",
@@ -191,6 +193,8 @@ export const TRANSLATIONS = {
     otherExpensesHint: "Fixed amount for this recipe (Gas, etc.)",
     noPrice: "No Price",
     printPdf: "Export Report",
+    marginSaved: "Margin set as default for this recipe",
+    setDefault: "Set Default",
 
     // Reports
     reportTitle: "Report",
@@ -319,6 +323,8 @@ export const TRANSLATIONS = {
     otherExpensesHint: "Valor fixo para esta receita (Gás, etc.)",
     noPrice: "Sem Preço",
     printPdf: "Exportar Relatório",
+    marginSaved: "Margem definida como padrão para esta receita",
+    setDefault: "Fixar",
 
     // Reports
     reportTitle: "Relatório",

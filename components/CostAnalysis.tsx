@@ -255,9 +255,14 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                     <div>
                        <div className="flex justify-between items-center mb-3">
                           <label className="text-xs font-bold text-stone-400 uppercase tracking-wide print:text-stone-600">{t.desiredMargin}</label>
-                          <div className="flex items-center gap-1 bg-stone-800 dark:bg-stone-700 px-2 py-1 rounded-lg border border-stone-700 no-print">
-                            <input type="number" className="w-12 bg-transparent text-white text-right font-bold text-sm focus:outline-none" value={desiredMargin} onChange={e => setDesiredMargin(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
-                            <span className="text-stone-500 font-bold text-xs">%</span>
+                          <div className="flex items-center gap-2 no-print">
+                              <div className="flex items-center gap-1 bg-stone-800 dark:bg-stone-700 px-2 py-1 rounded-lg border border-stone-700">
+                                <input type="number" className="w-12 bg-transparent text-white text-right font-bold text-sm focus:outline-none" value={desiredMargin} onChange={e => setDesiredMargin(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))} />
+                                <span className="text-stone-500 font-bold text-xs">%</span>
+                              </div>
+                              <button onClick={() => { onUpdateRecipe({ ...recipe, profitMargin: desiredMargin }); alert(t.marginSaved); }} className="p-1.5 bg-stone-800 dark:bg-stone-700 rounded-lg text-stone-400 hover:text-green-400 hover:bg-stone-700 dark:hover:bg-stone-600 transition" title={t.setDefault}>
+                                  <Icons.Check size={14} />
+                              </button>
                           </div>
                           <span className="hidden print:inline font-bold">{desiredMargin}%</span>
                        </div>
