@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem, Order } from '../types';
 import { calculateIngredientCost, normalizeKey, convertUnit } from '../utils/units';
@@ -15,14 +15,22 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
   
   // Manual Mode State
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>({});
+  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('shopping_selected_recipes');
+    return saved ? JSON.parse(saved) : {};
+  });
   
+  useEffect(() => {
+    localStorage.setItem('shopping_selected_recipes', JSON.stringify(selectedRecipes));
+  }, [selectedRecipes]);
+
   // Orders Mode State
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
   const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
-  const [showAllIngredients, setShowAllIngredients] = useState(false);
+  const [showAllIngredients, setShowAllIngredients] = useState(true);
+  const [localPantryOverrides, setLocalPantryOverrides] = useState<Record<string, number>>({});
 
   const addRecipe = () => {
     if (selectedRecipeToAdd && !selectedRecipes[selectedRecipeToAdd]) {
@@ -124,10 +132,14 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
     // Compare with pantry
     return Object.entries(ingredientsNeeded).map(([name, needed]) => {
-      const pantryItem = pantry[normalizeKey(name)];
+      const key = normalizeKey(name);
+      const pantryItem = pantry[key];
       let pantryQty = 0;
       
-      if (pantryItem) {
+      // Check for local override first
+      if (localPantryOverrides[key] !== undefined) {
+          pantryQty = localPantryOverrides[key];
+      } else if (pantryItem) {
         if (pantryItem.unit !== needed.unit) {
              const converted = convertUnit(pantryItem.quantity, pantryItem.unit, needed.unit);
              if (converted !== null) pantryQty = converted;
@@ -138,15 +150,48 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
       const toBuy = Math.max(0, needed.quantity - pantryQty);
       
+      // Calculate estimated cost
+      let unitPrice = 0;
+      if (pantryItem) {
+          // Normalize price to base unit if possible, or just use pantry price/qty
+          // Price per unit of the pantry item
+          unitPrice = pantryItem.price / pantryItem.quantity; 
+          // But wait, pantryItem.price is usually total price for the quantity? 
+          // Or price per unit? Types say "price: number". Usually price per package or unit.
+          // Let's assume price is for the quantity in pantry? No, usually price per unit.
+          // Let's look at how it's used elsewhere. 
+          // In CostAnalysis, we calculate cost.
+          // Let's assume we need to normalize.
+          // Actually, let's use calculateIngredientCost logic but for the 'toBuy' amount.
+      }
+      
+      // Better approach: Use calculateIngredientCost utility
+      let estimatedCost = 0;
+      if (toBuy > 0) {
+          if (pantryItem) {
+               estimatedCost = calculateIngredientCost(toBuy, needed.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
+          } else {
+              // Try to find ingredient in recipes to get purchase price
+              // This is expensive to search every time.
+              // Let's just use 0 if not in pantry for now, or try to find one instance.
+              const recipeWithIng = recipes.find(r => r.ingredients.some(i => normalizeKey(i.name) === key));
+              const ing = recipeWithIng?.ingredients.find(i => normalizeKey(i.name) === key);
+              if (ing && ing.purchasePrice && ing.purchaseUnitQuantity) {
+                  estimatedCost = calculateIngredientCost(toBuy, needed.unit, ing.purchasePrice, ing.purchaseUnitQuantity, ing.unit);
+              }
+          }
+      }
+
       return {
         name,
         needed: needed.quantity,
         inPantry: pantryQty,
         toBuy,
-        unit: needed.unit
+        unit: needed.unit,
+        estimatedCost
       };
     }).filter(item => showAllIngredients || item.toBuy > 0);
-  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate, showAllIngredients]);
+  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate, showAllIngredients, localPantryOverrides]);
 
   const handleExport = () => {
     const title = mode === 'MANUAL' 
@@ -371,21 +416,59 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
             <div className="space-y-3">
               {shoppingList.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl">
-                  <div>
+                <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl gap-3">
+                  <div className="flex-1">
                     <p className="font-bold text-stone-800 dark:text-white capitalize">{item.name}</p>
                     <p className="text-xs text-stone-500">
-                      {t.needed}: {item.needed.toFixed(1)} {item.unit} • {t.inPantry}: {item.inPantry.toFixed(1)}
+                      {t.needed}: {item.needed.toFixed(1)} {item.unit}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className="block text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                      {item.toBuy.toFixed(1)}
-                    </span>
-                    <span className="text-[10px] font-bold text-stone-400 uppercase">{item.unit}</span>
+                  
+                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
+                    <div className="flex flex-col items-end">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase">{t.inPantry}</label>
+                        <div className="flex items-center gap-1">
+                            <input 
+                                type="number" 
+                                className="w-20 p-1 text-right bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-sm dark:text-white"
+                                value={item.inPantry}
+                                onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    if (!isNaN(val)) {
+                                        setLocalPantryOverrides(prev => ({
+                                            ...prev,
+                                            [normalizeKey(item.name)]: val
+                                        }));
+                                    }
+                                }}
+                            />
+                            <span className="text-xs text-stone-500">{item.unit}</span>
+                        </div>
+                    </div>
+
+                    <div className="text-right min-w-[80px]">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase block">A Comprar</label>
+                        <span className="block text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {item.toBuy.toFixed(1)} <span className="text-xs text-stone-400">{item.unit}</span>
+                        </span>
+                        {item.estimatedCost > 0 && (
+                            <span className="block text-xs font-bold text-stone-500 dark:text-stone-400">
+                                ${item.estimatedCost.toFixed(2)}
+                            </span>
+                        )}
+                    </div>
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-stone-100 dark:border-stone-800 flex justify-end">
+                <div className="text-right">
+                    <p className="text-xs font-bold text-stone-400 uppercase">Costo Estimado Total</p>
+                    <p className="text-2xl font-bold text-stone-900 dark:text-white">
+                        ${shoppingList.reduce((sum, item) => sum + (item.estimatedCost || 0), 0).toFixed(2)}
+                    </p>
+                </div>
             </div>
           </div>
         ) : (

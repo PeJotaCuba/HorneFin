@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem, Order } from '../types';
 import { calculateIngredientCost, normalizeKey } from '../utils/units';
@@ -18,8 +18,15 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
   
   // Manual Mode State
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
-  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>({});
+  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>(() => {
+    const saved = localStorage.getItem('summary_selected_recipes');
+    return saved ? JSON.parse(saved) : {};
+  });
   const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
+  }, [selectedRecipes]);
 
   // Orders Mode State
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -68,10 +75,20 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                     pantryItem.quantity,
                     pantryItem.unit
                 );
+            } else if (ing.purchasePrice && ing.purchaseUnitQuantity) {
+                 // Fallback to recipe's own ingredient price if configured
+                 itemCost = calculateIngredientCost(
+                    ing.quantity,
+                    ing.unit,
+                    ing.purchasePrice,
+                    ing.purchaseUnitQuantity,
+                    ing.unit
+                 );
             }
 
             // Track ingredient cost for pie chart
-            ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + (itemCost * count);
+            const totalItemCost = itemCost * count;
+            ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + totalItemCost;
             return sum + itemCost;
         }, 0);
         
