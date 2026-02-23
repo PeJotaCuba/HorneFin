@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppView, Recipe, PantryItem } from './types';
 import { Dashboard } from './components/Dashboard';
 import { CostAnalysis } from './components/CostAnalysis';
@@ -55,6 +55,12 @@ export default function App() {
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
   const [baseRecipes, setBaseRecipes] = useState<any[]>(PRESET_RECIPES);
 
+  // Ref para rastrear la vista actual sin disparar efectos
+  const currentViewRef = useRef(currentView);
+  useEffect(() => {
+    currentViewRef.current = currentView;
+  }, [currentView]);
+
   // Simular carga inicial para el splash screen
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -94,33 +100,30 @@ export default function App() {
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
-    // Al montar, empujamos un estado inicial para "atrapar" el botón atrás
+    // Empujamos un estado inicial UNA VEZ al montar para "atrapar" el botón atrás
     window.history.pushState({ view: 'app' }, '', window.location.href);
 
     const handlePopState = (event: PopStateEvent) => {
-      // Si no estamos en el Dashboard, volvemos al Dashboard
-      if (currentView !== AppView.DASHBOARD) {
+      // Usamos el ref para saber dónde estamos sin depender del estado que reiniciaría el efecto
+      if (currentViewRef.current !== AppView.DASHBOARD) {
+        // Si no estamos en Dashboard, volvemos a Dashboard
         setCurrentView(AppView.DASHBOARD);
-        // Volvemos a empujar el estado para mantenernos en la "app"
+        // Restauramos el estado "trap" para el siguiente back
         window.history.pushState({ view: 'app' }, '', window.location.href);
       } else {
-        // Estamos en el Dashboard y el usuario presionó Atrás (se salió del estado 'app')
-        // Preguntamos si quiere salir
+        // Estamos en Dashboard, preguntamos si salir
         const shouldExit = window.confirm(TRANSLATIONS[language].confirmExit);
         if (!shouldExit) {
-          // Si no quiere salir, volvemos a empujar el estado
+          // Si cancela, restauramos el estado "trap"
           window.history.pushState({ view: 'app' }, '', window.location.href);
-        } else {
-          // Si quiere salir, dejamos que el evento popstate siga su curso (ya ocurrió)
-          // Opcionalmente podemos forzar ir más atrás si es necesario, pero usualmente
-          // el popstate ya nos llevó al historial anterior.
         }
+        // Si acepta, no hacemos pushState, permitiendo que el navegador retroceda (salir)
       }
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [currentView, language]); // Dependemos de currentView para saber dónde estamos
+  }, [language]); // Solo recreamos si cambia el idioma (para el mensaje de confirmación)
 
   useEffect(() => {
     if (darkMode) {
