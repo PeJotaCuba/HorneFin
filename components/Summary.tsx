@@ -90,10 +90,14 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
             const totalItemCost = itemCost * count;
             ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + totalItemCost;
             return sum + itemCost;
-        }, 0);
+        }, 0) + (recipe.otherExpenses || 0);
         
-        const revenue = (recipe.salePrice || 0) * count;
         const productionCost = cost * count;
+        
+        // Calculate revenue based on profit margin
+        // Price = Cost / (1 - margin)
+        const margin = recipe.profitMargin || 0;
+        const revenue = margin < 100 ? productionCost / (1 - (margin / 100)) : productionCost;
         
         totalRevenue += revenue;
         totalCost += productionCost;
@@ -314,27 +318,27 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                         return (
                           <div 
                           key={recipe.id}
-                          className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center"
+                          className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center gap-3"
                           >
-                          <span className="font-medium text-stone-700 dark:text-stone-300">
+                          <span className="font-medium text-stone-700 dark:text-stone-300 truncate flex-1 text-sm sm:text-base">
                               {recipe.name}
                           </span>
                           
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2 shrink-0">
                               <button 
                                   onClick={() => updateQuantity(recipe.id, -1)}
-                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                                  className="w-8 h-8 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600 hover:bg-stone-50"
                               >-</button>
-                              <span className="font-bold text-sm w-4 text-center dark:text-white">{count}</span>
+                              <span className="font-bold text-sm w-6 text-center dark:text-white">{count}</span>
                               <button 
                                   onClick={() => updateQuantity(recipe.id, 1)}
-                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                                  className="w-8 h-8 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600 hover:bg-stone-50"
                               >+</button>
                               <button 
                                   onClick={() => removeRecipe(recipe.id)}
-                                  className="ml-2 text-red-400 hover:text-red-500"
+                                  className="ml-1 text-red-400 hover:text-red-500 p-1"
                               >
-                                <Icons.Close size={16} />
+                                <Icons.Close size={18} />
                               </button>
                           </div>
                           </div>
@@ -377,19 +381,24 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
         </div>
 
         {/* Charts & Stats */}
-        {financials.revenue > 0 ? (
-          <div className="space-y-6 animate-in slide-in-from-bottom-4">
-            <div className="grid grid-cols-2 gap-4">
+        {financials.revenue > 0 || financials.cost > 0 ? (
+          <div className="space-y-4 animate-in slide-in-from-bottom-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-                <p className="text-xs font-bold text-stone-400 uppercase">{t.totalRevenue}</p>
-                <p className="text-2xl font-bold text-stone-900 dark:text-white mt-1">${financials.revenue.toFixed(0)}</p>
+                <p className="text-[10px] sm:text-xs font-bold text-stone-400 uppercase">Costos Totales</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-white mt-1">${financials.cost.toFixed(0)}</p>
               </div>
               <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-                <p className="text-xs font-bold text-stone-400 uppercase">{t.netProfit}</p>
-                <p className={`text-2xl font-bold mt-1 ${financials.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                <p className="text-[10px] sm:text-xs font-bold text-stone-400 uppercase">{t.totalRevenue}</p>
+                <p className="text-xl sm:text-2xl font-bold text-stone-900 dark:text-white mt-1">${financials.revenue.toFixed(0)}</p>
+              </div>
+            </div>
+
+            <div className="bg-red-500 p-6 rounded-3xl shadow-lg text-center transform transition hover:scale-[1.02]">
+                <p className="text-xs sm:text-sm font-bold text-white/80 uppercase mb-1">Ganancia Potencial</p>
+                <p className="text-3xl sm:text-4xl font-bold text-white tracking-tight">
                   ${financials.profit.toFixed(0)}
                 </p>
-              </div>
             </div>
 
             <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 h-80">
