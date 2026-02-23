@@ -87,6 +87,8 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
             }
 
             // Track ingredient cost for pie chart
+            if (isNaN(itemCost) || !isFinite(itemCost)) itemCost = 0;
+            
             const totalItemCost = itemCost * count;
             ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + totalItemCost;
             return sum + itemCost;
@@ -116,7 +118,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
 
         Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
             const recipe = recipes.find(r => r.id === recipeId);
-            if (recipe) {
+            if (recipe && recipe.ingredients) {
                 calculateForRecipe(recipe, count * periodMultiplier);
             }
         });
@@ -151,7 +153,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
 
         Object.entries(dayMap).forEach(([recipeId, count]) => {
             const recipe = recipes.find(r => r.id === recipeId);
-            if (recipe) {
+            if (recipe && recipe.ingredients) {
                 calculateForRecipe(recipe, count);
             }
         });
@@ -160,6 +162,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
     // Get top 5 ingredients
     const topIngredients = Object.entries(ingredientCosts)
         .map(([name, value]) => ({ name, value }))
+        .filter(item => item.value > 0 && isFinite(item.value))
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
@@ -403,25 +406,31 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
 
             <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 h-80">
               <h3 className="text-sm font-bold text-stone-500 mb-4 uppercase text-center">Top 5 Gastos (Ingredientes)</h3>
-              <ResponsiveContainer width="100%" height="85%">
-                <PieChart>
-                  <Pie
-                    data={financials.topIngredients}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {financials.topIngredients.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {financials.topIngredients.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="85%">
+                    <PieChart>
+                      <Pie
+                        data={financials.topIngredients}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {financials.topIngredients.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+              ) : (
+                  <div className="h-full flex items-center justify-center text-stone-400 text-sm">
+                      No hay datos suficientes para el gráfico
+                  </div>
+              )}
             </div>
 
             <button 
