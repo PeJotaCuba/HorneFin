@@ -92,6 +92,36 @@ export default function App() {
     localStorage.setItem('hornefin_data', JSON.stringify(data));
   }, [recipes, pantry, baseRecipes, darkMode, language]);
 
+  // Manejo del botón Atrás (History API)
+  useEffect(() => {
+    // Al montar, empujamos un estado inicial para "atrapar" el botón atrás
+    window.history.pushState({ view: 'app' }, '', window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      // Si no estamos en el Dashboard, volvemos al Dashboard
+      if (currentView !== AppView.DASHBOARD) {
+        setCurrentView(AppView.DASHBOARD);
+        // Volvemos a empujar el estado para mantenernos en la "app"
+        window.history.pushState({ view: 'app' }, '', window.location.href);
+      } else {
+        // Estamos en el Dashboard y el usuario presionó Atrás (se salió del estado 'app')
+        // Preguntamos si quiere salir
+        const shouldExit = window.confirm(TRANSLATIONS[language].confirmExit);
+        if (!shouldExit) {
+          // Si no quiere salir, volvemos a empujar el estado
+          window.history.pushState({ view: 'app' }, '', window.location.href);
+        } else {
+          // Si quiere salir, dejamos que el evento popstate siga su curso (ya ocurrió)
+          // Opcionalmente podemos forzar ir más atrás si es necesario, pero usualmente
+          // el popstate ya nos llevó al historial anterior.
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [currentView, language]); // Dependemos de currentView para saber dónde estamos
+
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');

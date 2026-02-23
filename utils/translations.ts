@@ -81,6 +81,7 @@ export const TRANSLATIONS = {
     month: "Mes (24)",
     selectRecipes: "Seleccionar Recetas",
     quantity: "Cantidad",
+    confirmExit: "¿Desea salir de la aplicación?",
 
     // Reports
     reportTitle: "Reporte",
@@ -227,6 +228,7 @@ export const TRANSLATIONS = {
     month: "Month (24)",
     selectRecipes: "Select Recipes",
     quantity: "Quantity",
+    confirmExit: "Do you want to exit the app?",
 
     // Reports
     reportTitle: "Report",
@@ -373,6 +375,7 @@ export const TRANSLATIONS = {
     month: "Mês (24)",
     selectRecipes: "Selecionar Receitas",
     quantity: "Quantidade",
+    confirmExit: "Deseja sair do aplicativo?",
 
     // Reports
     reportTitle: "Relatório",

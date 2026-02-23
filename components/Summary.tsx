@@ -11,23 +11,58 @@ interface SummaryProps {
 }
 
 export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
-  const [period, setPeriod] = React.useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
-  const [selectedRecipes, setSelectedRecipes] = React.useState<{ recipeId: string; count: number }[]>(() => {
-      // Default to all recipes with count 1
-      return recipes.map(r => ({ recipeId: r.id, count: 1 }));
+  // Initialize state from localStorage if available
+  const [period, setPeriod] = React.useState<'DAY' | 'WEEK' | 'MONTH'>(() => {
+      return (localStorage.getItem('hornefin_summary_period') as any) || 'DAY';
+  });
+  
+  const [selectedRecipes, setSelectedRecipes] = React.useState<{ recipeId: string; count: number; selected: boolean }[]>(() => {
+      const saved = localStorage.getItem('hornefin_summary_recipes');
+      if (saved) {
+          try {
+             // Migrate old format if necessary (add selected: true)
+             const parsed = JSON.parse(saved);
+             if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].selected === 'undefined') {
+                 return parsed.map((p: any) => ({ ...p, selected: true }));
+             }
+             return parsed;
+          } catch (e) {
+             console.error("Error parsing saved summary recipes", e);
+          }
+      }
+      // Default: all selected
+      return recipes.map(r => ({ recipeId: r.id, count: 1, selected: true }));
   });
 
+  // Save to localStorage
+  React.useEffect(() => {
+      localStorage.setItem('hornefin_summary_period', period);
+  }, [period]);
+
+  React.useEffect(() => {
+      localStorage.setItem('hornefin_summary_recipes', JSON.stringify(selectedRecipes));
+  }, [selectedRecipes]);
+
   // Sync selected recipes when recipes prop changes (e.g. new recipe added)
-  // But preserve existing counts if possible
   React.useEffect(() => {
       setSelectedRecipes(prev => {
-          const newSelection = recipes.map(r => {
-              const existing = prev.find(p => p.recipeId === r.id);
-              return existing ? existing : { recipeId: r.id, count: 1 };
-          });
-          return newSelection;
+          // Filter out recipes that no longer exist in the main list
+          const validRecipes = prev.filter(p => recipes.some(r => r.id === p.recipeId));
+          
+          // Add new recipes that aren't in the list yet (default to selected)
+          const newRecipes = recipes
+              .filter(r => !validRecipes.some(p => p.recipeId === r.id))
+              .map(r => ({ recipeId: r.id, count: 1, selected: true }));
+          
+          const combined = [...validRecipes, ...newRecipes];
+          
+          // Only update if something actually changed to avoid infinite loops
+          if (combined.length !== prev.length) {
+             return combined;
+          }
+          return prev;
       });
-  }, [recipes.length]); // Only re-run if number of recipes changes
+  }, [recipes]); // Sync when recipes list changes
 
   const periodMultiplier = {
       'DAY': 1,
@@ -41,14 +76,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   };
 
   const toggleRecipe = (id: string) => {
-      setSelectedRecipes(prev => {
-          const exists = prev.find(p => p.recipeId === id);
-          if (exists) {
-              return prev.filter(p => p.recipeId !== id);
-          } else {
-              return [...prev, { recipeId: id, count: 1 }];
-          }
-      });
+      setSelectedRecipes(prev => prev.map(p => p.recipeId === id ? { ...p, selected: !p.selected } : p));
   };
 
   let totalRevenue = 0;
@@ -56,7 +84,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
   let totalProfit = 0;
   const ingredientCosts: Record<string, number> = {};
 
-  selectedRecipes.forEach(sel => {
+  selectedRecipes.filter(s => s.selected).forEach(sel => {
     const recipe = recipes.find(r => r.id === sel.recipeId);
     if (!recipe) return;
 
@@ -109,7 +137,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
       
       <h3>Producción Planificada:</h3>
       <ul>
-        ${selectedRecipes.filter(s => s.count > 0).map(sel => {
+        ${selectedRecipes.filter(s => s.selected && s.count > 0).map(sel => {
             const r = recipes.find(x => x.id === sel.recipeId);
             if (!r) return '';
             return `<li>${r.name} (x${sel.count * periodMultiplier})</li>`;
@@ -180,8 +208,9 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
             <h3 className="font-bold text-stone-800 dark:text-white mb-3 text-xs uppercase tracking-widest">{t.selectRecipes}</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
                 {recipes.map(recipe => {
-                    const isSelected = selectedRecipes.some(s => s.recipeId === recipe.id);
-                    const count = selectedRecipes.find(s => s.recipeId === recipe.id)?.count || 0;
+                    const selection = selectedRecipes.find(s => s.recipeId === recipe.id);
+                    const isSelected = selection?.selected || false;
+                    const count = selection?.count || 0;
                     
                     return (
                         <div key={recipe.id} className={`flex items-center justify-between p-2 rounded-xl border transition-colors ${isSelected ? 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700' : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/50'}`}>
