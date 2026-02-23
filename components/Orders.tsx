@@ -226,8 +226,9 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                         onClick={handleContactPick}
                         className="p-3 bg-stone-100 dark:bg-stone-800 text-stone-500 rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition"
                         title="Buscar contacto"
+                        type="button"
                       >
-                        <Icons.Users size={20} />
+                        {Icons.Users ? <Icons.Users size={20} /> : <span className="text-xs">Contactos</span>}
                       </button>
                     </div>
                   </div>
@@ -259,9 +260,15 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                   className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white placeholder-stone-300 dark:placeholder-stone-600"
                   value={quantity}
                   placeholder="0"
+                  min="1"
                   onChange={e => {
                     const val = e.target.value;
-                    setQuantity(val === '' ? '' : parseInt(val));
+                    if (val === '') {
+                        setQuantity('');
+                    } else {
+                        const num = parseInt(val);
+                        setQuantity(isNaN(num) ? '' : num);
+                    }
                   }}
                 />
               </div>
