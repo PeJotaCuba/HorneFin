@@ -73,6 +73,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [editingIngIndex, setEditingIngIndex] = useState<number | null>(null);
   const [showNotesModal, setShowNotesModal] = useState<Recipe | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<'top' | 'bottom'>('bottom');
   
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -82,6 +83,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
+
+  const handleMenuToggle = (e: React.MouseEvent<HTMLButtonElement>, recipeId: string) => {
+    e.stopPropagation();
+    if (activeMenuId === recipeId) {
+      setActiveMenuId(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      // Estimate menu height ~ 320px
+      if (spaceBelow < 320) {
+        setMenuPosition('top');
+      } else {
+        setMenuPosition('bottom');
+      }
+      setActiveMenuId(recipeId);
+    }
+  };
 
   const handleDownloadBase = () => {
     const data = JSON.stringify(baseRecipes, null, 2);
@@ -344,7 +362,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   {/* Menu Trigger */}
                   <div className="absolute top-3 right-3">
                       <button 
-                        onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === recipe.id ? null : recipe.id); }}
+                        onClick={(e) => handleMenuToggle(e, recipe.id)}
                         className="p-2 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition-colors"
                       >
                         <Icons.More size={20} />
@@ -352,7 +370,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
                       {/* Dropdown Menu */}
                       {activeMenuId === recipe.id && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-stone-900 rounded-xl shadow-xl border border-stone-100 dark:border-stone-800 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right">
+                        <div className={`absolute right-0 ${menuPosition === 'top' ? 'bottom-full mb-2 origin-bottom-right' : 'top-full mt-1 origin-top-right'} w-48 bg-white dark:bg-stone-900 rounded-xl shadow-xl border border-stone-100 dark:border-stone-800 z-50 overflow-hidden animate-in fade-in zoom-in-95`}>
                             <button onClick={(e) => { e.stopPropagation(); handleShare(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
                                 <Icons.Share size={16} className="text-green-500"/> {t.share}
                             </button>
