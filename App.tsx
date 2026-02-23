@@ -115,12 +115,29 @@ export default function App() {
   };
 
   const handleUpdateRecipe = (updatedRecipe: Recipe) => {
+    // Find original recipe to get the name before update (in case name changed)
+    const originalRecipe = recipes.find(r => r.id === updatedRecipe.id);
+    const originalName = originalRecipe ? originalRecipe.name : updatedRecipe.name;
+
     // Move updated recipe to the top of the list
     const otherRecipes = recipes.filter(r => r.id !== updatedRecipe.id);
     setRecipes([updatedRecipe, ...otherRecipes]);
     
     if (selectedRecipe && selectedRecipe.id === updatedRecipe.id) {
        setSelectedRecipe(updatedRecipe);
+    }
+
+    // Update Base Recipes if it exists there (Sync logic)
+    const baseIndex = baseRecipes.findIndex(r => r.name === originalName);
+    if (baseIndex !== -1) {
+        const updatedBaseRecipe = {
+            name: updatedRecipe.name,
+            ingredients: updatedRecipe.ingredients.map(i => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
+            notes: updatedRecipe.notes
+        };
+        // Remove old entry and add updated one to the top
+        const otherBaseRecipes = baseRecipes.filter((_, index) => index !== baseIndex);
+        setBaseRecipes([updatedBaseRecipe, ...otherBaseRecipes]);
     }
   };
 
@@ -158,13 +175,18 @@ export default function App() {
       ingredients: recipe.ingredients.map(i => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
       notes: recipe.notes
     };
-    // Check if already exists to avoid duplicates
-    const exists = baseRecipes.some(r => r.name === newBaseRecipe.name);
-    if (!exists) {
-        setBaseRecipes([...baseRecipes, newBaseRecipe]);
-        alert(TRANSLATIONS[language].recipeAddedToBase);
+    // Check if already exists
+    const index = baseRecipes.findIndex(r => r.name === newBaseRecipe.name);
+    
+    if (index !== -1) {
+        // If exists, update and move to top
+        const otherBase = baseRecipes.filter((_, i) => i !== index);
+        setBaseRecipes([newBaseRecipe, ...otherBase]);
+        alert(TRANSLATIONS[language].recipeAddedToBase); 
     } else {
-        alert(TRANSLATIONS[language].recipeAlreadyInList);
+        // Add to top
+        setBaseRecipes([newBaseRecipe, ...baseRecipes]);
+        alert(TRANSLATIONS[language].recipeAddedToBase);
     }
   };
 
