@@ -10,6 +10,7 @@ import { Logo } from './components/Logo';
 import { Header } from './components/Header';
 import { TRANSLATIONS, Language } from './utils/translations';
 import { normalizeKey } from './utils/units';
+import { PRESET_RECIPES } from './utils/presets';
 
 // Componente Splash Screen Actualizado
 const SplashScreen = ({ subtitle }: { subtitle: string }) => (
@@ -52,6 +53,7 @@ export default function App() {
   const [initialEditMode, setInitialEditMode] = useState(false);
   
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
+  const [baseRecipes, setBaseRecipes] = useState<any[]>(PRESET_RECIPES);
 
   // Simular carga inicial para el splash screen
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function App() {
         const parsed = JSON.parse(savedData);
         if (parsed.recipes) setRecipes(parsed.recipes);
         if (parsed.pantry) setPantry(parsed.pantry);
+        if (parsed.baseRecipes) setBaseRecipes(parsed.baseRecipes);
         if (parsed.darkMode !== undefined) setDarkMode(parsed.darkMode);
         if (parsed.language) setLanguage(parsed.language);
       } catch (e) {
@@ -82,11 +85,12 @@ export default function App() {
     const data = {
       recipes,
       pantry,
+      baseRecipes,
       darkMode,
       language
     };
     localStorage.setItem('hornefin_data', JSON.stringify(data));
-  }, [recipes, pantry, darkMode, language]);
+  }, [recipes, pantry, baseRecipes, darkMode, language]);
 
   useEffect(() => {
     if (darkMode) {
@@ -148,6 +152,37 @@ export default function App() {
     setPantry(newPantry);
   };
 
+  const handleAddToBase = (recipe: Recipe) => {
+    const newBaseRecipe = {
+      name: recipe.name,
+      ingredients: recipe.ingredients.map(i => ({ name: i.name, quantity: i.quantity, unit: i.unit })),
+      notes: recipe.notes
+    };
+    // Check if already exists to avoid duplicates
+    const exists = baseRecipes.some(r => r.name === newBaseRecipe.name);
+    if (!exists) {
+        setBaseRecipes([...baseRecipes, newBaseRecipe]);
+        alert(TRANSLATIONS[language].recipeAddedToBase);
+    } else {
+        alert(TRANSLATIONS[language].recipeAlreadyInList);
+    }
+  };
+
+  const handleUpdateBaseFromURL = async () => {
+    try {
+      const response = await fetch('https://raw.githubusercontent.com/PeJotaCuba/HorneFin/refs/heads/main/base.json');
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setBaseRecipes(data);
+        alert(TRANSLATIONS[language].baseUpdated);
+      }
+    } catch (error) {
+      console.error('Error updating base:', error);
+      alert(TRANSLATIONS[language].baseUpdateError);
+    }
+  };
+
   const handleDownloadBackup = () => {
     const data = {
       timestamp: new Date().toISOString(),
@@ -201,6 +236,9 @@ export default function App() {
             onDeleteRecipe={handleDeleteRecipe}
             onSelectRecipe={handleSelectRecipe}
             onDuplicateRecipe={handleDuplicateRecipe}
+            baseRecipes={baseRecipes}
+            onAddToBase={handleAddToBase}
+            onUpdateBaseFromURL={handleUpdateBaseFromURL}
             t={t}
           />
         )}

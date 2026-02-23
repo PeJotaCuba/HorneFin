@@ -66,6 +66,14 @@ export const TRANSLATIONS = {
     marginSaved: "Margen fijado por defecto para esta receta",
     setDefault: "Fijar",
     
+    // Base
+    addToBase: "Agregar a Base",
+    downloadBase: "Descargar Base (JSON)",
+    updateBase: "Actualizar desde Nube",
+    baseUpdated: "Base de recetas actualizada correctamente",
+    baseUpdateError: "Error al actualizar la base",
+    recipeAddedToBase: "Receta agregada a la base",
+
     // Reports
     reportTitle: "Reporte",
     reportDate: "Fecha",
@@ -196,6 +204,14 @@ export const TRANSLATIONS = {
     marginSaved: "Margin set as default for this recipe",
     setDefault: "Set Default",
 
+    // Base
+    addToBase: "Add to Base",
+    downloadBase: "Download Base (JSON)",
+    updateBase: "Update from Cloud",
+    baseUpdated: "Recipe base updated successfully",
+    baseUpdateError: "Error updating base",
+    recipeAddedToBase: "Recipe added to base",
+
     // Reports
     reportTitle: "Report",
     reportDate: "Date",
@@ -325,6 +341,14 @@ export const TRANSLATIONS = {
     printPdf: "Exportar Relatório",
     marginSaved: "Margem definida como padrão para esta receita",
     setDefault: "Fixar",
+
+    // Base
+    addToBase: "Adicionar à Base",
+    downloadBase: "Baixar Base (JSON)",
+    updateBase: "Atualizar da Nuvem",
+    baseUpdated: "Base de receitas atualizada com sucesso",
+    baseUpdateError: "Erro ao atualizar a base",
+    recipeAddedToBase: "Receita adicionada à base",
 
     // Reports
     reportTitle: "Relatório",
