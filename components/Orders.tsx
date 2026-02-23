@@ -55,7 +55,86 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     setShowPhonePicker(false);
   };
 
-  // ... (handleEdit, handleSave, toggleDay, handleRecipeSelect, handleCall, handleSMS, handleWhatsApp remain same)
+  const handleEdit = (order: Order) => {
+    setCustomerName(order.customerName);
+    setPhone(order.phone || '');
+    setProduct(order.product);
+    setRecipeId(order.recipeId || '');
+    setQuantity(order.quantity);
+    setSpecifications(order.specifications || '');
+    setHasDelivery(order.hasDelivery);
+    setDeliveryAddress(order.deliveryAddress || '');
+    
+    if (order.isRecurring) {
+        setIsRecurring(true);
+        setRecurringDays(order.recurringDays || []);
+        setDeliveryTime(order.deliveryTime || '');
+        setDeliveryDate('');
+    } else {
+        setIsRecurring(false);
+        const date = new Date(order.deliveryDate);
+        setDeliveryDate(date.toISOString().slice(0, 10));
+        setDeliveryTime(date.toTimeString().slice(0, 5));
+    }
+    
+    setEditingId(order.id);
+    setIsAdding(true);
+  };
+
+  const handleSave = () => {
+    if (!customerName || !product || !deliveryTime || (!isRecurring && !deliveryDate)) {
+      alert("Por favor completa los campos requeridos");
+      return;
+    }
+
+    const timestamp = !isRecurring ? new Date(`${deliveryDate}T${deliveryTime}`).getTime() : Date.now();
+    const finalQuantity = (quantity === '' || quantity <= 0) ? 1 : quantity;
+
+    const newOrder: Order = {
+      id: editingId || Date.now().toString(),
+      customerName,
+      phone,
+      product,
+      recipeId,
+      quantity: finalQuantity,
+      specifications,
+      hasDelivery,
+      deliveryAddress: hasDelivery ? deliveryAddress : undefined,
+      deliveryDate: timestamp,
+      deliveryTime,
+      isRecurring,
+      recurringDays: isRecurring ? recurringDays : undefined,
+      status: 'PENDING',
+      createdAt: editingId ? (orders.find(o => o.id === editingId)?.createdAt || Date.now()) : Date.now()
+    };
+
+    if (editingId) {
+      onUpdateOrder(newOrder);
+    } else {
+      onAddOrder(newOrder);
+    }
+    resetForm();
+  };
+
+  const toggleDay = (day: number) => {
+      setRecurringDays(prev => 
+          prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+      );
+  };
+
+  const handleRecipeSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const rId = e.target.value;
+      setRecipeId(rId);
+      if (rId) {
+          const r = recipes.find(rc => rc.id === rId);
+          if (r) setProduct(r.name);
+      }
+  };
+
+  // Actions
+  const handleCall = (phone: string) => window.open(`tel:${phone}`, '_self');
+  const handleSMS = (phone: string) => window.open(`sms:${phone}`, '_self');
+  const handleWhatsApp = (phone: string) => window.open(`https://wa.me/${phone.replace(/\D/g,'')}`, '_blank');
 
   const handleContactPick = async () => {
     if ('contacts' in navigator && 'ContactsManager' in window) {
@@ -86,7 +165,27 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     }
   };
 
-  // ... (handleExport, sortedOrders, weekDays remain same)
+  const handleExport = () => {
+    if (!startDate || !endDate) {
+      alert("Selecciona un rango de fechas");
+      return;
+    }
+    alert("Exportando...");
+  };
+
+  const sortedOrders = [...orders].sort((a, b) => {
+      return b.createdAt - a.createdAt;
+  });
+
+  const weekDays = [
+      { id: 1, label: t.monday },
+      { id: 2, label: t.tuesday },
+      { id: 3, label: t.wednesday },
+      { id: 4, label: t.thursday },
+      { id: 5, label: t.friday },
+      { id: 6, label: t.saturday },
+      { id: 0, label: t.sunday },
+  ];
 
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
