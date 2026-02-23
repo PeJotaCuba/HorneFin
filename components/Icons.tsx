@@ -41,7 +41,8 @@ import {
   PhoneCall,
   Menu,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 } from 'lucide-react';
 
 export const Icons = {
@@ -86,5 +87,6 @@ export const Icons = {
   Call: PhoneCall,
   Menu,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Users
 };

@@ -20,7 +20,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
   const [phone, setPhone] = useState('');
   const [product, setProduct] = useState('');
   const [recipeId, setRecipeId] = useState('');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number | ''>('');
   const [specifications, setSpecifications] = useState('');
   const [hasDelivery, setHasDelivery] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -38,7 +38,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     setPhone('');
     setProduct('');
     setRecipeId('');
-    setQuantity(1);
+    setQuantity('');
     setSpecifications('');
     setHasDelivery(false);
     setDeliveryAddress('');
@@ -55,7 +55,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     setPhone(order.phone || '');
     setProduct(order.product);
     setRecipeId(order.recipeId || '');
-    setQuantity(order.quantity || 1);
+    setQuantity(order.quantity);
     setSpecifications(order.specifications || '');
     setHasDelivery(order.hasDelivery);
     setDeliveryAddress(order.deliveryAddress || '');
@@ -83,6 +83,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     }
 
     const timestamp = !isRecurring ? new Date(`${deliveryDate}T${deliveryTime}`).getTime() : Date.now();
+    const finalQuantity = (quantity === '' || quantity <= 0) ? 1 : quantity;
 
     const newOrder: Order = {
       id: editingId || Date.now().toString(),
@@ -90,7 +91,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
       phone,
       product,
       recipeId,
-      quantity,
+      quantity: finalQuantity,
       specifications,
       hasDelivery,
       deliveryAddress: hasDelivery ? deliveryAddress : undefined,
@@ -129,6 +130,27 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
   const handleCall = (phone: string) => window.open(`tel:${phone}`, '_self');
   const handleSMS = (phone: string) => window.open(`sms:${phone}`, '_self');
   const handleWhatsApp = (phone: string) => window.open(`https://wa.me/${phone.replace(/\D/g,'')}`, '_blank');
+  
+  const handleContactPick = async () => {
+    if ('contacts' in navigator && 'ContactsManager' in window) {
+      try {
+        const props = ['name', 'tel'];
+        const opts = { multiple: false };
+        // @ts-ignore
+        const contacts = await navigator.contacts.select(props, opts);
+        if (contacts.length) {
+          const contact = contacts[0];
+          if (contact.name && contact.name.length) setCustomerName(contact.name[0]);
+          if (contact.tel && contact.tel.length) setPhone(contact.tel[0]);
+        }
+      } catch (ex) {
+        console.error(ex);
+        alert("Error al acceder a contactos o permiso denegado.");
+      }
+    } else {
+      alert("Tu dispositivo no soporta la selección de contactos.");
+    }
+  };
 
   const handleExport = () => {
     if (!startDate || !endDate) {
@@ -193,12 +215,21 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                   </div>
                   <div>
                     <label className="text-xs font-bold text-stone-400 uppercase mb-1 block">{t.phone}</label>
-                    <input 
-                      type="tel" 
-                      className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
-                    />
+                    <div className="flex gap-2">
+                      <input 
+                        type="tel" 
+                        className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                      />
+                      <button 
+                        onClick={handleContactPick}
+                        className="p-3 bg-stone-100 dark:bg-stone-800 text-stone-500 rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition"
+                        title="Buscar contacto"
+                      >
+                        <Icons.Users size={20} />
+                      </button>
+                    </div>
                   </div>
               </div>
 
@@ -225,9 +256,13 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                 <label className="text-xs font-bold text-stone-400 uppercase mb-1 block">{t.quantity}</label>
                 <input 
                   type="number" 
-                  className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                  className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white placeholder-stone-300 dark:placeholder-stone-600"
                   value={quantity}
-                  onChange={e => setQuantity(parseInt(e.target.value) || 1)}
+                  placeholder="0"
+                  onChange={e => {
+                    const val = e.target.value;
+                    setQuantity(val === '' ? '' : parseInt(val));
+                  }}
                 />
               </div>
 
