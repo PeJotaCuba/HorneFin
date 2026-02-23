@@ -8,10 +8,11 @@ interface OrdersProps {
   onAddOrder: (order: Order) => void;
   onUpdateOrder: (order: Order) => void;
   onDeleteOrder: (id: string) => void;
+  onConfirmRecurring?: (order: Order) => void;
   t: any;
 }
 
-export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder, onUpdateOrder, onDeleteOrder, t }) => {
+export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder, onUpdateOrder, onDeleteOrder, onConfirmRecurring, t }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   
@@ -463,6 +464,42 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                     </div>
                   )}
                 </div>
+
+                {/* Recurring Confirmation Button */}
+                {order.isRecurring && onConfirmRecurring && (() => {
+                    const now = new Date();
+                    const currentDay = now.getDay();
+                    const [hours, minutes] = (order.deliveryTime || "00:00").split(':').map(Number);
+                    const deliveryTimeToday = new Date();
+                    deliveryTimeToday.setHours(hours, minutes, 0, 0);
+
+                    const isDayMatch = order.recurringDays?.includes(currentDay);
+                    const isTimePassed = now.getTime() >= deliveryTimeToday.getTime();
+                    
+                    const lastDelivery = order.lastDeliveryDate ? new Date(order.lastDeliveryDate) : null;
+                    const isProcessedToday = lastDelivery && 
+                                           lastDelivery.getDate() === now.getDate() && 
+                                           lastDelivery.getMonth() === now.getMonth() && 
+                                           lastDelivery.getFullYear() === now.getFullYear();
+
+                    if (isDayMatch && isTimePassed && !isProcessedToday) {
+                        return (
+                            <div className="mb-3 animate-pulse">
+                                <button 
+                                    onClick={() => {
+                                        if (confirm(t.confirmDeliveryMsg)) {
+                                            onConfirmRecurring(order);
+                                        }
+                                    }}
+                                    className="w-full py-2 bg-purple-100 text-purple-700 rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-purple-200 transition border border-purple-200"
+                                >
+                                    <Icons.Check size={14} /> {t.confirmDelivery}
+                                </button>
+                            </div>
+                        );
+                    }
+                    return null;
+                })()}
 
                 {/* Contact Actions */}
                 {order.phone && (

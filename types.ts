@@ -57,4 +57,18 @@ export interface Order {
   recurringDays?: number[]; // 0=Sun, 1=Mon, ...
   status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
   createdAt: number;
+  lastDeliveryDate?: number; // timestamp of last confirmed delivery (for recurring)
+}
+
+export interface Sale {
+  id: string;
+  orderId?: string;
+  recipeId?: string;
+  recipeName: string;
+  quantity: number;
+  amount: number;
+  cost: number;
+  profit: number;
+  date: number;
+  type: 'ONE_TIME' | 'RECURRING';
 }

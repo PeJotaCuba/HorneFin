@@ -155,6 +155,10 @@ export const TRANSLATIONS = {
     profitHint: "Si vendes 1 unidad de cada receta",
     costDistribution: "Distribución de Costos",
     noData: "No hay datos de costos",
+    sales: "Ventas",
+    salesHistory: "Historial de Ventas",
+    confirmDelivery: "Confirmar Entrega",
+    confirmDeliveryMsg: "¿Se entregó este pedido recurrente?",
     
     // Shopping
     shoppingTitle: "Lista de Compras",
@@ -173,7 +177,7 @@ export const TRANSLATIONS = {
     // Nav
     navHome: "Inicio",
     navCosts: "Costos",
-    navSummary: "Finanzas",
+    navSummary: "Finanzas Globales",
     navShopping: "Compras",
     navHomeInfo: "Gestión de Recetas",
     navCostsInfo: "Precios de Insumos",
@@ -342,6 +346,10 @@ export const TRANSLATIONS = {
     profitHint: "If you sell 1 unit of each recipe",
     costDistribution: "Cost Distribution",
     noData: "No cost data",
+    sales: "Sales",
+    salesHistory: "Sales History",
+    confirmDelivery: "Confirm Delivery",
+    confirmDeliveryMsg: "Was this recurring order delivered?",
 
     // Shopping
     shoppingTitle: "Shopping List",
@@ -360,7 +368,7 @@ export const TRANSLATIONS = {
     // Nav
     navHome: "Home",
     navCosts: "Costs",
-    navSummary: "Finances",
+    navSummary: "Global Finances",
     navShopping: "Shopping",
     navHomeInfo: "Recipe Management",
     navCostsInfo: "Ingredient Prices",
@@ -529,6 +537,10 @@ export const TRANSLATIONS = {
     profitHint: "Se você vender 1 unidade de cada receta",
     costDistribution: "Distribuição de Custos",
     noData: "Sem dados de custo",
+    sales: "Vendas",
+    salesHistory: "Histórico de Vendas",
+    confirmDelivery: "Confirmar Entrega",
+    confirmDeliveryMsg: "Este pedido recorrente foi entregue?",
 
     // Shopping
     shoppingTitle: "Lista de Compras",
@@ -547,7 +559,7 @@ export const TRANSLATIONS = {
     // Nav
     navHome: "Início",
     navCosts: "Custos",
-    navSummary: "Finanças",
+    navSummary: "Finanças Globais",
     navShopping: "Compras",
     navHomeInfo: "Gestão de Receitas",
     navCostsInfo: "Preços de Insumos",

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
-import { Recipe, PantryItem, Order } from '../types';
+import { Recipe, PantryItem, Order, Sale } from '../types';
 import { calculateIngredientCost, normalizeKey } from '../utils/units';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
@@ -8,13 +8,14 @@ interface SummaryProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
   orders?: Order[]; // Added orders prop
+  sales?: Sale[]; // Added sales prop
   t: any;
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], t }) => {
-  const [mode, setMode] = useState<'MANUAL' | 'ORDERS'>('MANUAL');
+export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], sales = [], t }) => {
+  const [mode, setMode] = useState<'MANUAL' | 'ORDERS' | 'SALES'>('MANUAL');
   
   // Manual Mode State
   const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
@@ -28,7 +29,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
     localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
   }, [selectedRecipes]);
 
-  // Orders Mode State
+  // Orders/Sales Mode State
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
@@ -122,7 +123,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                 calculateForRecipe(recipe, count * periodMultiplier);
             }
         });
-    } else {
+    } else if (mode === 'ORDERS') {
         // ORDERS MODE
         const start = new Date(startDate).getTime();
         const end = new Date(endDate).getTime() + 86400000;
@@ -157,6 +158,56 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                 calculateForRecipe(recipe, count);
             }
         });
+    } else if (mode === 'SALES') {
+        // SALES MODE (Actual historical data)
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime() + 86400000;
+
+        const filteredSales = sales.filter(s => s.date >= start && s.date < end);
+        
+        filteredSales.forEach(sale => {
+            totalRevenue += sale.amount;
+            totalCost += sale.cost;
+            
+            // For ingredient breakdown, we need to recalculate based on recipe
+            // Or we can just skip ingredient breakdown for sales history if performance is an issue
+            // But user asked for top ingredients... so let's try to calculate.
+            if (sale.recipeId) {
+                const recipe = recipes.find(r => r.id === sale.recipeId);
+                if (recipe) {
+                     recipe.ingredients.forEach(ing => {
+                        const key = normalizeKey(ing.name);
+                        const pantryItem = pantry[key];
+                        let itemCost = 0;
+                        if (pantryItem) {
+                            itemCost = calculateIngredientCost(ing.quantity, ing.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
+                        } else if (ing.purchasePrice && ing.purchaseUnitQuantity) {
+                            itemCost = calculateIngredientCost(ing.quantity, ing.unit, ing.purchasePrice, ing.purchaseUnitQuantity, ing.unit);
+                        }
+                        if (isNaN(itemCost) || !isFinite(itemCost)) itemCost = 0;
+                        const totalItemCost = itemCost * sale.quantity;
+                        ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + totalItemCost;
+                     });
+                }
+            }
+            
+            // Add to breakdown
+            const existing = recipeBreakdown.find(b => b.name === sale.recipeName);
+            if (existing) {
+                existing.count += sale.quantity;
+                existing.revenue += sale.amount;
+                existing.cost += sale.cost;
+                existing.profit += sale.profit;
+            } else {
+                recipeBreakdown.push({
+                    name: sale.recipeName,
+                    count: sale.quantity,
+                    revenue: sale.amount,
+                    cost: sale.cost,
+                    profit: sale.profit
+                });
+            }
+        });
     }
 
     // Get top 5 ingredients
@@ -173,7 +224,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
       breakdown: recipeBreakdown,
       topIngredients
     };
-  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate]);
+  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, sales, startDate, endDate]);
 
   const handleExport = () => {
     const title = mode === 'MANUAL' 
@@ -247,22 +298,29 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-indigo-600 text-white p-1.5 rounded-lg"><Icons.PieChart size={24} /></span>
-          {t.navSummary}
+          {t.summaryTitle}
         </h1>
+        <p className="text-stone-500 dark:text-stone-400 text-xs mt-1">{t.summarySubtitle}</p>
 
         {/* Mode Toggle */}
         <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl mt-4">
             <button 
                 onClick={() => setMode('MANUAL')}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+                className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
                 {t.modeManual}
             </button>
             <button 
                 onClick={() => setMode('ORDERS')}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'ORDERS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+                className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${mode === 'ORDERS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                {t.modeOrders}
+                {t.modeOrders} (Proyección)
+            </button>
+            <button 
+                onClick={() => setMode('SALES')}
+                className={`flex-1 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all ${mode === 'SALES' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+            >
+                {t.sales} (Real)
             </button>
         </div>
       </div>
@@ -354,7 +412,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                 </div>
               </>
           ) : (
-              // ORDERS MODE CONFIG
+              // ORDERS & SALES MODE CONFIG
               <div className="animate-in fade-in">
                   <div className="flex gap-4 mb-4">
                     <div className="flex-1">
@@ -377,7 +435,9 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
                     </div>
                   </div>
                   <p className="text-xs text-stone-500 italic">
-                      Se calcularán las finanzas basadas en los pedidos (incluyendo recurrentes) dentro de este rango de fechas.
+                      {mode === 'ORDERS' 
+                        ? "Se calcularán las finanzas basadas en los pedidos (incluyendo recurrentes) dentro de este rango de fechas."
+                        : "Se muestran las ventas reales confirmadas y facturadas en este periodo."}
                   </p>
               </div>
           )}
