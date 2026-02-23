@@ -56,9 +56,21 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
 
     const calculateForRecipe = (recipe: Recipe, count: number) => {
         const cost = recipe.ingredients.reduce((sum, ing) => {
-            const itemCost = calculateIngredientCost(ing, pantry);
-            // Track ingredient cost for pie chart
             const key = normalizeKey(ing.name);
+            const pantryItem = pantry[key];
+            let itemCost = 0;
+            
+            if (pantryItem) {
+                itemCost = calculateIngredientCost(
+                    ing.quantity,
+                    ing.unit,
+                    pantryItem.price,
+                    pantryItem.quantity,
+                    pantryItem.unit
+                );
+            }
+
+            // Track ingredient cost for pie chart
             ingredientCosts[ing.name] = (ingredientCosts[ing.name] || 0) + (itemCost * count);
             return sum + itemCost;
         }, 0);
