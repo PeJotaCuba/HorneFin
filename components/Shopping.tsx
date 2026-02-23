@@ -21,14 +21,20 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
   const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
-  const toggleRecipe = (id: string) => {
+  const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
+  const [showAllIngredients, setShowAllIngredients] = useState(false);
+
+  const addRecipe = () => {
+    if (selectedRecipeToAdd && !selectedRecipes[selectedRecipeToAdd]) {
+      setSelectedRecipes(prev => ({ ...prev, [selectedRecipeToAdd]: 1 }));
+      setSelectedRecipeToAdd('');
+    }
+  };
+
+  const removeRecipe = (id: string) => {
     setSelectedRecipes(prev => {
       const newSelected = { ...prev };
-      if (newSelected[id]) {
-        delete newSelected[id];
-      } else {
-        newSelected[id] = 1;
-      }
+      delete newSelected[id];
       return newSelected;
     });
   };
@@ -139,8 +145,8 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
         toBuy,
         unit: needed.unit
       };
-    }).filter(item => item.toBuy > 0);
-  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate]);
+    }).filter(item => showAllIngredients || item.toBuy > 0);
+  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate, showAllIngredients]);
 
   const handleExport = () => {
     const title = mode === 'MANUAL' 
@@ -251,36 +257,63 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
                 <div>
                     <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectRecipes}</label>
+                    
+                    <div className="flex gap-2 mb-3">
+                      <select 
+                        className="flex-1 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                        value={selectedRecipeToAdd}
+                        onChange={e => setSelectedRecipeToAdd(e.target.value)}
+                      >
+                        <option value="">{t.select}</option>
+                        {recipes.map(r => (
+                          <option key={r.id} value={r.id}>{r.name}</option>
+                        ))}
+                      </select>
+                      <button 
+                        onClick={addRecipe}
+                        disabled={!selectedRecipeToAdd}
+                        className="px-4 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50"
+                      >
+                        {t.add}
+                      </button>
+                    </div>
+
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {recipes.map(recipe => (
-                        <div 
-                        key={recipe.id}
-                        onClick={() => toggleRecipe(recipe.id)}
-                        className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${
-                            selectedRecipes[recipe.id] 
-                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10' 
-                            : 'border-transparent bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700'
-                        }`}
-                        >
-                        <span className={`font-medium ${selectedRecipes[recipe.id] ? 'text-emerald-900 dark:text-emerald-100' : 'text-stone-600 dark:text-stone-400'}`}>
-                            {recipe.name}
-                        </span>
-                        
-                        {selectedRecipes[recipe.id] && (
-                            <div className="flex items-center gap-3 bg-white dark:bg-stone-900 rounded-lg px-2 py-1 shadow-sm" onClick={e => e.stopPropagation()}>
-                            <button 
-                                onClick={() => updateQuantity(recipe.id, -1)}
-                                className="w-6 h-6 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-stone-200 text-stone-600"
-                            >-</button>
-                            <span className="font-bold text-sm w-4 text-center dark:text-white">{selectedRecipes[recipe.id]}</span>
-                            <button 
-                                onClick={() => updateQuantity(recipe.id, 1)}
-                                className="w-6 h-6 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900 rounded-full hover:bg-emerald-200 text-emerald-700"
-                            >+</button>
-                            </div>
-                        )}
-                        </div>
-                    ))}
+                    {Object.entries(selectedRecipes).map(([recipeId, count]) => {
+                        const recipe = recipes.find(r => r.id === recipeId);
+                        if (!recipe) return null;
+                        return (
+                          <div 
+                          key={recipe.id}
+                          className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center"
+                          >
+                          <span className="font-medium text-stone-700 dark:text-stone-300">
+                              {recipe.name}
+                          </span>
+                          
+                          <div className="flex items-center gap-3">
+                              <button 
+                                  onClick={() => updateQuantity(recipe.id, -1)}
+                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                              >-</button>
+                              <span className="font-bold text-sm w-4 text-center dark:text-white">{count}</span>
+                              <button 
+                                  onClick={() => updateQuantity(recipe.id, 1)}
+                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                              >+</button>
+                              <button 
+                                  onClick={() => removeRecipe(recipe.id)}
+                                  className="ml-2 text-red-400 hover:text-red-500"
+                              >
+                                <Icons.Close size={16} />
+                              </button>
+                          </div>
+                          </div>
+                        );
+                    })}
+                    {Object.keys(selectedRecipes).length === 0 && (
+                      <p className="text-center text-stone-400 text-sm py-4">{t.noRecipes}</p>
+                    )}
                     </div>
                 </div>
               </>
@@ -319,7 +352,14 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-stone-900 dark:text-white text-lg">{t.shoppingList}</h2>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <button 
+                  onClick={() => setShowAllIngredients(!showAllIngredients)}
+                  className={`p-2 rounded-xl transition ${showAllIngredients ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}
+                  title="Mostrar todos los ingredientes"
+                >
+                  <Icons.Layers size={20} />
+                </button>
                 <button onClick={handleWhatsApp} className="p-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition">
                   <Icons.Share size={20} />
                 </button>
@@ -339,7 +379,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="block text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="block text-lg font-bold text-emerald-600 dark:text-emerald-400">
                       {item.toBuy.toFixed(1)}
                     </span>
                     <span className="text-[10px] font-bold text-stone-400 uppercase">{item.unit}</span>
