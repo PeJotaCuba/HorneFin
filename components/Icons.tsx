@@ -42,7 +42,7 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  Users
+  User
 } from 'lucide-react';
 
 export const Icons = {
@@ -88,5 +88,5 @@ export const Icons = {
   Menu,
   ChevronLeft,
   ChevronRight,
-  Users
+  Users: User
 };
