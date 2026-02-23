@@ -52,7 +52,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
   const filteredItems = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
+    <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800">
         <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-amber-500 text-white p-1 rounded-lg">
@@ -137,15 +137,13 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
         )}
       </div>
 
-      <div className="fixed bottom-[90px] left-0 right-0 px-4 z-30">
-         <button 
-           onClick={handleSaveAll}
-           className="w-full bg-stone-900 dark:bg-white text-white dark:text-stone-900 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:bg-black dark:hover:bg-stone-200 transition-colors"
-         >
-           <Icons.Save size={18} />
-           {t.saveAll}
-         </button>
-      </div>
+      <button 
+        onClick={handleSaveAll}
+        className="fixed bottom-6 right-6 bg-stone-900 dark:bg-white text-white dark:text-stone-900 w-14 h-14 rounded-full shadow-xl flex items-center justify-center hover:bg-black dark:hover:bg-stone-200 transition-transform hover:scale-105 z-30"
+        title={t.saveAll}
+      >
+        <Icons.Save size={24} />
+      </button>
     </div>
   );
 };

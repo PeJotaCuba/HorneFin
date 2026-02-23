@@ -11,6 +11,7 @@ interface HeaderProps {
   onDownloadBackup: () => void;
   onRestoreBackup: (data: any) => void;
   isCompact?: boolean;
+  onToggleSidebar: () => void;
   t: any;
 }
 
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onDownloadBackup, 
   onRestoreBackup,
   isCompact = false,
+  onToggleSidebar,
   t
 }) => {
   const backupInputRef = useRef<HTMLInputElement>(null);
@@ -52,14 +54,22 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <div className={`bg-white dark:bg-stone-900 shadow-sm sticky top-0 z-50 border-b border-stone-100 dark:border-stone-800 transition-all duration-300 ${isCompact ? 'py-2 px-4' : 'py-4 px-6'}`}>
-      <div className="flex justify-between items-center max-w-md mx-auto">
-        <div className="flex-shrink-0">
-          <Logo 
-            className={`transition-all duration-300 ${isCompact ? 'h-10' : 'h-14'} w-auto`} 
-            showText={true} 
-            subtitle={t.logoSubtitle}
-          />
+    <div className={`bg-white dark:bg-stone-900 shadow-sm sticky top-0 z-30 border-b border-stone-100 dark:border-stone-800 transition-all duration-300 ${isCompact ? 'py-2 px-4' : 'py-4 px-6'}`}>
+      <div className="flex justify-between items-center w-full">
+        <div className="flex items-center gap-3">
+            <button 
+                onClick={onToggleSidebar}
+                className="md:hidden p-2 -ml-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg"
+            >
+                <Icons.Menu size={24} />
+            </button>
+            <div className="flex-shrink-0">
+            <Logo 
+                className={`transition-all duration-300 ${isCompact ? 'h-10' : 'h-14'} w-auto`} 
+                showText={true} 
+                subtitle={t.logoSubtitle}
+            />
+            </div>
         </div>
         <div className="flex gap-2 items-center">
           

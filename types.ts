@@ -37,5 +37,24 @@ export enum AppView {
   PANTRY = 'PANTRY',
   SUMMARY = 'SUMMARY',
   COST_ANALYSIS = 'COST_ANALYSIS',
-  SHOPPING = 'SHOPPING'
+  SHOPPING = 'SHOPPING',
+  ORDERS = 'ORDERS'
+}
+
+export interface Order {
+  id: string;
+  customerName: string;
+  phone?: string;
+  product: string;
+  recipeId?: string; // Link to a recipe for calculations
+  quantity: number;
+  specifications?: string;
+  hasDelivery: boolean;
+  deliveryAddress?: string;
+  deliveryDate: number; // timestamp (used for one-time orders)
+  deliveryTime?: string; // HH:MM (used for recurring)
+  isRecurring: boolean;
+  recurringDays?: number[]; // 0=Sun, 1=Mon, ...
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  createdAt: number;
 }

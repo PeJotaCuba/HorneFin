@@ -1,164 +1,175 @@
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import React, { useState, useMemo } from 'react';
 import { Icons } from './Icons';
-import { Recipe, PantryItem } from '../types';
+import { Recipe, PantryItem, Order } from '../types';
 import { calculateIngredientCost, normalizeKey } from '../utils/units';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 interface SummaryProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
+  orders?: Order[]; // Added orders prop
   t: any;
 }
 
-export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
-  // Initialize state from localStorage if available
-  const [period, setPeriod] = React.useState<'DAY' | 'WEEK' | 'MONTH'>(() => {
-      return (localStorage.getItem('hornefin_summary_period') as any) || 'DAY';
-  });
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
+export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], t }) => {
+  const [mode, setMode] = useState<'MANUAL' | 'ORDERS'>('MANUAL');
   
-  const [selectedRecipes, setSelectedRecipes] = React.useState<{ recipeId: string; count: number; selected: boolean }[]>(() => {
-      const saved = localStorage.getItem('hornefin_summary_recipes');
-      if (saved) {
-          try {
-             // Migrate old format if necessary (add selected: true)
-             const parsed = JSON.parse(saved);
-             if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].selected === 'undefined') {
-                 return parsed.map((p: any) => ({ ...p, selected: true }));
-             }
-             return parsed;
-          } catch (e) {
-             console.error("Error parsing saved summary recipes", e);
-          }
-      }
-      // Default: all selected
-      return recipes.map(r => ({ recipeId: r.id, count: 1, selected: true }));
-  });
-
-  // Save to localStorage
-  React.useEffect(() => {
-      localStorage.setItem('hornefin_summary_period', period);
-  }, [period]);
-
-  React.useEffect(() => {
-      localStorage.setItem('hornefin_summary_recipes', JSON.stringify(selectedRecipes));
-  }, [selectedRecipes]);
-
-  // Sync selected recipes when recipes prop changes (e.g. new recipe added)
-  React.useEffect(() => {
-      setSelectedRecipes(prev => {
-          // Filter out recipes that no longer exist in the main list
-          const validRecipes = prev.filter(p => recipes.some(r => r.id === p.recipeId));
-          
-          // Add new recipes that aren't in the list yet (default to selected)
-          const newRecipes = recipes
-              .filter(r => !validRecipes.some(p => p.recipeId === r.id))
-              .map(r => ({ recipeId: r.id, count: 1, selected: true }));
-          
-          const combined = [...validRecipes, ...newRecipes];
-          
-          // Only update if something actually changed to avoid infinite loops
-          if (combined.length !== prev.length) {
-             return combined;
-          }
-          return prev;
-      });
-  }, [recipes]); // Sync when recipes list changes
-
-  const periodMultiplier = {
-      'DAY': 1,
-      'WEEK': 6,
-      'MONTH': 24
-  }[period];
-
-  const updateCount = (id: string, count: number) => {
-      if (count < 0) return;
-      setSelectedRecipes(prev => prev.map(p => p.recipeId === id ? { ...p, count } : p));
-  };
+  // Manual Mode State
+  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>({});
+  
+  // Orders Mode State
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
   const toggleRecipe = (id: string) => {
-      setSelectedRecipes(prev => prev.map(p => p.recipeId === id ? { ...p, selected: !p.selected } : p));
+    setSelectedRecipes(prev => {
+      const newSelected = { ...prev };
+      if (newSelected[id]) {
+        delete newSelected[id];
+      } else {
+        newSelected[id] = 1;
+      }
+      return newSelected;
+    });
   };
 
-  let totalRevenue = 0;
-  let totalCosts = 0;
-  let totalProfit = 0;
-  const ingredientCosts: Record<string, number> = {};
-
-  selectedRecipes.filter(s => s.selected).forEach(sel => {
-    const recipe = recipes.find(r => r.id === sel.recipeId);
-    if (!recipe) return;
-
-    const quantity = sel.count * periodMultiplier;
-    if (quantity === 0) return;
-
-    let recipeCost = 0;
-    recipe.ingredients.forEach(ing => {
-       const key = normalizeKey(ing.name);
-       const pItem = pantry[key];
-       let cost = 0;
-       if (pItem && pItem.price > 0) {
-          cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
-       }
-       recipeCost += cost;
-       ingredientCosts[key] = (ingredientCosts[key] || 0) + (cost * quantity);
+  const updateQuantity = (id: string, delta: number) => {
+    setSelectedRecipes(prev => {
+      const current = prev[id] || 0;
+      const newQty = Math.max(1, current + delta);
+      return { ...prev, [id]: newQty };
     });
+  };
 
-    const otherExpenses = recipe.otherExpenses || 0;
-    recipeCost += otherExpenses;
-    const margin = recipe.profitMargin || 25;
-    const price = recipe.suggestedPrice || (recipeCost > 0 ? recipeCost / (1 - (margin / 100)) : 0);
-    
-    totalCosts += recipeCost * quantity;
-    totalRevenue += price * quantity;
-    totalProfit += (price - recipeCost) * quantity;
-  });
+  const financials = useMemo(() => {
+    let totalRevenue = 0;
+    let totalCost = 0;
+    const recipeBreakdown: any[] = [];
 
-  const pieData = Object.entries(ingredientCosts)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 6); 
+    const calculateForRecipe = (recipe: Recipe, count: number) => {
+        const cost = recipe.ingredients.reduce((sum, ing) => {
+            const itemCost = calculateIngredientCost(ing, pantry);
+            return sum + itemCost;
+        }, 0);
+        
+        const revenue = (recipe.salePrice || 0) * count;
+        const productionCost = cost * count;
+        
+        totalRevenue += revenue;
+        totalCost += productionCost;
 
-  const COLORS = ['#DC2626', '#EA580C', '#D97706', '#CA8A04', '#65A30D', '#57534E'];
+        recipeBreakdown.push({
+            name: recipe.name,
+            count,
+            revenue,
+            cost: productionCost,
+            profit: revenue - productionCost
+        });
+    };
 
-  const exportSummaryDoc = () => {
+    if (mode === 'MANUAL') {
+        const periodMultiplier = selectedPeriod === 'week' ? 6 : selectedPeriod === 'month' ? 24 : 1;
+
+        Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (recipe) {
+                calculateForRecipe(recipe, count * periodMultiplier);
+            }
+        });
+    } else {
+        // ORDERS MODE
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime() + 86400000;
+
+        const dayMap: Record<string, number> = {};
+
+        // 1. One-time orders
+        orders.filter(o => !o.isRecurring && o.recipeId && o.deliveryDate >= start && o.deliveryDate < end && o.status !== 'CANCELLED')
+              .forEach(o => {
+                  dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
+              });
+
+        // 2. Recurring orders
+        const recurringOrders = orders.filter(o => o.isRecurring && o.recipeId && o.status !== 'CANCELLED');
+        
+        if (recurringOrders.length > 0) {
+            let current = new Date(start);
+            while (current.getTime() < end) {
+                const dayOfWeek = current.getDay();
+                recurringOrders.forEach(o => {
+                    if (o.recurringDays?.includes(dayOfWeek)) {
+                        dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
+                    }
+                });
+                current.setDate(current.getDate() + 1);
+            }
+        }
+
+        Object.entries(dayMap).forEach(([recipeId, count]) => {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (recipe) {
+                calculateForRecipe(recipe, count);
+            }
+        });
+    }
+
+    return {
+      revenue: totalRevenue,
+      cost: totalCost,
+      profit: totalRevenue - totalCost,
+      breakdown: recipeBreakdown
+    };
+  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate]);
+
+  const handleExport = () => {
+    const title = mode === 'MANUAL' 
+        ? `Reporte Financiero (${t[selectedPeriod]})`
+        : `Reporte Financiero (${startDate} - ${endDate})`;
+
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>Resumen Financiero Global</title>
+      <head><meta charset='utf-8'><title>${title}</title>
       <style>
         body { font-family: 'Arial', sans-serif; }
         table { border-collapse: collapse; width: 100%; margin-top: 20px; }
         th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         th { background-color: #f2f2f2; }
+        .header { margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+        .summary { margin-bottom: 20px; font-size: 1.2em; }
       </style>
       </head><body>
-      <h1>Resumen Financiero - HorneFin</h1>
-      <p>Fecha: ${new Date().toLocaleDateString()}</p>
-      <p>Período: ${t[period.toLowerCase()]}</p>
-      
-      <h3>Producción Planificada:</h3>
-      <ul>
-        ${selectedRecipes.filter(s => s.selected && s.count > 0).map(sel => {
-            const r = recipes.find(x => x.id === sel.recipeId);
-            if (!r) return '';
-            return `<li>${r.name} (x${sel.count * periodMultiplier})</li>`;
-        }).join('')}
-      </ul>
-
-      <h2>Totales Globales (Proyección)</h2>
-      <ul>
-        <li><strong>Costos Totales:</strong> $${totalCosts.toFixed(2)}</li>
-        <li><strong>Ingresos Estimados:</strong> $${totalRevenue.toFixed(2)}</li>
-        <li><strong>Ganancia Neta Potencial:</strong> $${totalProfit.toFixed(2)}</li>
-      </ul>
-
-      <h2>Distribución de Costos (Top Insumos)</h2>
+      <div class="header">
+        <h1>${title}</h1>
+        <p>Generado el: ${new Date().toLocaleDateString()}</p>
+      </div>
+      <div class="summary">
+        <p><strong>Ingresos Totales:</strong> $${financials.revenue.toFixed(2)}</p>
+        <p><strong>Costos Totales:</strong> $${financials.cost.toFixed(2)}</p>
+        <p><strong>Ganancia Neta:</strong> $${financials.profit.toFixed(2)}</p>
+        <p><strong>Margen:</strong> ${financials.revenue > 0 ? ((financials.profit / financials.revenue) * 100).toFixed(1) : 0}%</p>
+      </div>
+      <h2>Detalle por Receta</h2>
       <table>
-        <thead><tr><th>Ingrediente</th><th>Costo Acumulado</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Receta</th>
+            <th>Cantidad</th>
+            <th>Ingresos</th>
+            <th>Costo</th>
+            <th>Ganancia</th>
+          </tr>
+        </thead>
         <tbody>
-          ${pieData.map(item => `
+          ${financials.breakdown.map(item => `
             <tr>
               <td>${item.name}</td>
-              <td>$${item.value.toFixed(2)}</td>
+              <td>${item.count}</td>
+              <td>$${item.revenue.toFixed(2)}</td>
+              <td>$${item.cost.toFixed(2)}</td>
+              <td>$${item.profit.toFixed(2)}</td>
             </tr>
           `).join('')}
         </tbody>
@@ -170,126 +181,181 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `HorneFin_Resumen_${new Date().toISOString().slice(0, 10)}.doc`;
+    link.download = `Reporte_${new Date().toISOString().slice(0, 10)}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   return (
-    <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex justify-between items-center">
-        <div>
-          <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-            <span className="bg-red-600 text-white p-1 rounded-lg"><Icons.PieChart size={18} /></span>
-            {t.summaryTitle}
-          </h1>
-          <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.summarySubtitle}</p>
-        </div>
-        <div className="flex gap-2">
-            <select 
-                value={period} 
-                onChange={(e) => setPeriod(e.target.value as any)}
-                className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-bold py-2 px-3 rounded-xl border-none focus:ring-0 cursor-pointer"
+    <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
+      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+          <span className="bg-indigo-600 text-white p-1.5 rounded-lg"><Icons.PieChart size={24} /></span>
+          {t.navSummary}
+        </h1>
+
+        {/* Mode Toggle */}
+        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl mt-4">
+            <button 
+                onClick={() => setMode('MANUAL')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                <option value="DAY">{t.day}</option>
-                <option value="WEEK">{t.week}</option>
-                <option value="MONTH">{t.month}</option>
-            </select>
-            <button onClick={exportSummaryDoc} className="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition" title="Exportar Resumen">
-            <Icons.Download size={20} />
+                {t.modeManual}
+            </button>
+            <button 
+                onClick={() => setMode('ORDERS')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'ORDERS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+            >
+                {t.modeOrders}
             </button>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
-        {/* Recipe Selection */}
-        <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-            <h3 className="font-bold text-stone-800 dark:text-white mb-3 text-xs uppercase tracking-widest">{t.selectRecipes}</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                {recipes.map(recipe => {
-                    const selection = selectedRecipes.find(s => s.recipeId === recipe.id);
-                    const isSelected = selection?.selected || false;
-                    const count = selection?.count || 0;
-                    
-                    return (
-                        <div key={recipe.id} className={`flex items-center justify-between p-2 rounded-xl border transition-colors ${isSelected ? 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700' : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/50'}`}>
-                            <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleRecipe(recipe.id)}>
-                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-500 border-red-500 text-white' : 'border-stone-300 dark:border-stone-600'}`}>
-                                    {isSelected && <Icons.Check size={14} strokeWidth={3} />}
-                                </div>
-                                <span className={`text-sm font-bold ${isSelected ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400'}`}>{recipe.name}</span>
-                            </div>
-                            {isSelected && (
-                                <div className="flex items-center bg-white dark:bg-stone-900 border dark:border-stone-700 rounded-lg overflow-hidden shadow-sm">
-                                    <span className="px-2 text-[10px] font-bold text-stone-400 uppercase">x</span>
-                                    <input 
-                                        type="number" 
-                                        className="w-12 py-1 pr-1 bg-transparent text-center font-bold text-sm dark:text-white focus:outline-none"
-                                        value={count}
-                                        onChange={(e) => updateCount(recipe.id, parseInt(e.target.value) || 0)}
-                                    />
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{t.totalCosts}</p>
-              <p className="text-xl font-bold text-stone-800 dark:text-stone-200">${totalCosts.toFixed(2)}</p>
-           </div>
-           <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{t.estRevenue}</p>
-              <p className="text-xl font-bold text-green-600 dark:text-green-500">${totalRevenue.toFixed(2)}</p>
-           </div>
-           <div className="col-span-2 bg-red-600 p-6 rounded-[2rem] text-white shadow-xl shadow-red-100 dark:shadow-none relative overflow-hidden">
-              <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
-              <div className="relative z-10">
-                 <p className="text-red-100 font-bold text-xs uppercase tracking-widest mb-1">{t.netProfit}</p>
-                 <p className="text-4xl font-bold">${totalProfit.toFixed(2)}</p>
-                 <p className="text-[10px] text-red-100 mt-2 opacity-80">{t.profitHint}</p>
-              </div>
-           </div>
-        </div>
-
-        <div className="bg-white dark:bg-stone-900 p-6 rounded-[2rem] shadow-sm border border-stone-100 dark:border-stone-800">
-           <h3 className="font-bold text-stone-800 dark:text-white mb-6 text-xs uppercase tracking-widest">{t.costDistribution}</h3>
-           
-           {pieData.length > 0 ? (
-             <div className="h-64 w-full relative">
-               <ResponsiveContainer width="100%" height="100%">
-                 <PieChart>
-                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={70} outerRadius={90} paddingAngle={5} dataKey="value" stroke="none">
-                      {pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                    </Pie>
-                    <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.95)' }} />
-                 </PieChart>
-               </ResponsiveContainer>
-               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-tighter">Insumos</span>
-                  <span className="font-black text-stone-800 dark:text-white">TOP {pieData.length}</span>
-               </div>
-             </div>
-           ) : (
-             <div className="h-40 flex items-center justify-center text-stone-300 dark:text-stone-600 italic text-sm">{t.noData}</div>
-           )}
-           
-           <div className="space-y-4 mt-4">
-              {pieData.map((entry, index) => (
-                <div key={index} className="flex justify-between items-center group">
-                   <div className="flex items-center gap-3">
-                      <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                      <span className="text-sm font-bold text-stone-600 dark:text-stone-300 capitalize group-hover:text-stone-900 transition-colors">{entry.name}</span>
-                   </div>
-                   <span className="font-black text-stone-800 dark:text-stone-200 text-sm">${entry.value.toFixed(2)}</span>
+        
+        {/* Configuration */}
+        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+          {mode === 'MANUAL' ? (
+              <>
+                <div className="mb-6">
+                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectPeriod}</label>
+                    <div className="flex gap-2">
+                    {(['day', 'week', 'month'] as const).map(p => (
+                        <button
+                        key={p}
+                        onClick={() => setSelectedPeriod(p)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                            selectedPeriod === p 
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' 
+                            : 'border-transparent bg-stone-100 dark:bg-stone-800 text-stone-500'
+                        }`}
+                        >
+                        {t[p]}
+                        </button>
+                    ))}
+                    </div>
                 </div>
-              ))}
-           </div>
+
+                <div>
+                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectRecipes}</label>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {recipes.map(recipe => (
+                        <div 
+                        key={recipe.id}
+                        onClick={() => toggleRecipe(recipe.id)}
+                        className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${
+                            selectedRecipes[recipe.id] 
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/10' 
+                            : 'border-transparent bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700'
+                        }`}
+                        >
+                        <span className={`font-medium ${selectedRecipes[recipe.id] ? 'text-indigo-900 dark:text-indigo-100' : 'text-stone-600 dark:text-stone-400'}`}>
+                            {recipe.name}
+                        </span>
+                        
+                        {selectedRecipes[recipe.id] && (
+                            <div className="flex items-center gap-3 bg-white dark:bg-stone-900 rounded-lg px-2 py-1 shadow-sm" onClick={e => e.stopPropagation()}>
+                            <button 
+                                onClick={() => updateQuantity(recipe.id, -1)}
+                                className="w-6 h-6 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-stone-200 text-stone-600"
+                            >-</button>
+                            <span className="font-bold text-sm w-4 text-center dark:text-white">{selectedRecipes[recipe.id]}</span>
+                            <button 
+                                onClick={() => updateQuantity(recipe.id, 1)}
+                                className="w-6 h-6 flex items-center justify-center bg-indigo-100 dark:bg-indigo-900 rounded-full hover:bg-indigo-200 text-indigo-700"
+                            >+</button>
+                            </div>
+                        )}
+                        </div>
+                    ))}
+                    </div>
+                </div>
+              </>
+          ) : (
+              // ORDERS MODE CONFIG
+              <div className="animate-in fade-in">
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.startDate}</label>
+                        <input 
+                            type="date" 
+                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.endDate}</label>
+                        <input 
+                            type="date" 
+                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                        />
+                    </div>
+                  </div>
+                  <p className="text-xs text-stone-500 italic">
+                      Se calcularán las finanzas basadas en los pedidos (incluyendo recurrentes) dentro de este rango de fechas.
+                  </p>
+              </div>
+          )}
         </div>
+
+        {/* Charts & Stats */}
+        {financials.revenue > 0 ? (
+          <div className="space-y-6 animate-in slide-in-from-bottom-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+                <p className="text-xs font-bold text-stone-400 uppercase">{t.totalRevenue}</p>
+                <p className="text-2xl font-bold text-stone-900 dark:text-white mt-1">${financials.revenue.toFixed(0)}</p>
+              </div>
+              <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+                <p className="text-xs font-bold text-stone-400 uppercase">{t.netProfit}</p>
+                <p className={`text-2xl font-bold mt-1 ${financials.profit >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  ${financials.profit.toFixed(0)}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: t.profit, value: Math.max(0, financials.profit) },
+                      { name: t.costs, value: financials.cost }
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    <Cell key="profit" fill="#10B981" />
+                    <Cell key="cost" fill="#EF4444" />
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+
+            <button 
+                onClick={handleExport}
+                className="w-full py-4 bg-stone-900 dark:bg-stone-700 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2"
+            >
+                <Icons.Download size={20} />
+                {t.exportReport}
+            </button>
+          </div>
+        ) : (
+          <div className="text-center py-10 opacity-50">
+            <Icons.PieChart size={48} className="mx-auto mb-2 text-stone-300" />
+            <p className="text-stone-400 font-medium">{t.noData}</p>
+          </div>
+        )}
       </div>
     </div>
   );

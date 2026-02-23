@@ -1,187 +1,183 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Icons } from './Icons';
-import { Recipe, PantryItem } from '../types';
+import { Recipe, PantryItem, Order } from '../types';
 import { calculateIngredientCost, normalizeKey, convertUnit } from '../utils/units';
 
 interface ShoppingProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
+  orders?: Order[]; // Added orders prop
   t: any;
 }
 
-interface ShoppingItem {
-    originalName: string;
-    normalizedKey: string;
-    totalNeeded: number;
-    unit: string;
-    pricePerUnit: number;
-    purchaseUnit: string;
-    cost: number;
-}
-
-export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
-  const [period, setPeriod] = useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
-  // Initialize state from localStorage if available
-  const [selectedRecipes, setSelectedRecipes] = useState<{ recipeId: string; count: number }[]>(() => {
-    const saved = localStorage.getItem('hornefin_shopping_recipes');
-    return saved ? JSON.parse(saved) : [];
-  });
+export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], t }) => {
+  const [mode, setMode] = useState<'MANUAL' | 'ORDERS'>('MANUAL');
   
-  const [stock, setStock] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem('hornefin_shopping_stock');
-    return saved ? JSON.parse(saved) : {};
-  });
+  // Manual Mode State
+  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
+  const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>({});
+  
+  // Orders Mode State
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
 
-  const [unitOverrides, setUnitOverrides] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem('hornefin_shopping_units');
-    return saved ? JSON.parse(saved) : {};
-  });
-
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string>('');
-
-  // Persist state changes
-  useEffect(() => {
-    localStorage.setItem('hornefin_shopping_recipes', JSON.stringify(selectedRecipes));
-  }, [selectedRecipes]);
-
-  useEffect(() => {
-    localStorage.setItem('hornefin_shopping_stock', JSON.stringify(stock));
-  }, [stock]);
-
-  useEffect(() => {
-    localStorage.setItem('hornefin_shopping_units', JSON.stringify(unitOverrides));
-  }, [unitOverrides]);
-
-  const addRecipe = () => {
-      if (!selectedRecipeId) return;
-      if (selectedRecipes.find(r => r.recipeId === selectedRecipeId)) {
-          alert(t.recipeAlreadyInList);
-          return;
+  const toggleRecipe = (id: string) => {
+    setSelectedRecipes(prev => {
+      const newSelected = { ...prev };
+      if (newSelected[id]) {
+        delete newSelected[id];
+      } else {
+        newSelected[id] = 1;
       }
-      setSelectedRecipes([...selectedRecipes, { recipeId: selectedRecipeId, count: 1 }]);
-      setSelectedRecipeId('');
+      return newSelected;
+    });
   };
 
-  const removeRecipe = (id: string) => {
-      setSelectedRecipes(selectedRecipes.filter(r => r.recipeId !== id));
+  const updateQuantity = (id: string, delta: number) => {
+    setSelectedRecipes(prev => {
+      const current = prev[id] || 0;
+      const newQty = Math.max(1, current + delta);
+      return { ...prev, [id]: newQty };
+    });
   };
-
-  const updateCount = (id: string, newCount: number) => {
-      if (newCount < 0) return;
-      setSelectedRecipes(selectedRecipes.map(r => r.recipeId === id ? { ...r, count: newCount } : r));
-  };
-
-  const updateStock = (key: string, val: number) => {
-      setStock(prev => ({ ...prev, [key]: val }));
-  };
-
-  const updateUnitOverride = (key: string, newUnit: string) => {
-      setUnitOverrides(prev => ({ ...prev, [key]: newUnit }));
-  };
-
-  const clearAll = () => {
-    if (confirm(t.clearList + "?")) {
-      setSelectedRecipes([]);
-      setStock({});
-      setUnitOverrides({});
-    }
-  };
-
-  const periodMultiplier = {
-      'DAY': 1,
-      'WEEK': 6,
-      'MONTH': 24
-  }[period];
 
   const shoppingList = useMemo(() => {
-      const itemsMap: Record<string, ShoppingItem> = {};
+    const ingredientsNeeded: Record<string, { quantity: number; unit: string }> = {};
 
-      selectedRecipes.forEach(sel => {
-          const recipe = recipes.find(r => r.id === sel.recipeId);
-          if (!recipe) return;
+    if (mode === 'MANUAL') {
+        const periodMultiplier = selectedPeriod === 'week' ? 6 : selectedPeriod === 'month' ? 24 : 1;
 
-          recipe.ingredients.forEach(ing => {
-              const key = normalizeKey(ing.name);
-              const pItem = pantry[key];
-              const targetUnit = unitOverrides[key] || (pItem ? pItem.unit : ing.unit);
+        Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
+        const recipe = recipes.find(r => r.id === recipeId);
+        if (!recipe) return;
 
-              if (!itemsMap[key]) {
-                  itemsMap[key] = {
-                      originalName: ing.name, 
-                      normalizedKey: key,
-                      totalNeeded: 0,
-                      unit: targetUnit,
-                      pricePerUnit: pItem ? pItem.price : 0,
-                      purchaseUnit: pItem ? pItem.unit : targetUnit,
-                      cost: 0
-                  };
-              }
+        recipe.ingredients.forEach(ing => {
+            const key = normalizeKey(ing.name);
+            const totalNeeded = ing.quantity * count * periodMultiplier;
 
-              const convertedQty = convertUnit(ing.quantity, ing.unit, targetUnit);
-              itemsMap[key].totalNeeded += convertedQty * (sel.count || 0) * periodMultiplier;
-          });
-      });
+            if (ingredientsNeeded[key]) {
+            ingredientsNeeded[key].quantity += totalNeeded;
+            } else {
+            ingredientsNeeded[key] = {
+                quantity: totalNeeded,
+                unit: ing.unit
+            };
+            }
+        });
+        });
+    } else {
+        // ORDERS MODE
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime() + 86400000; // End of day
 
-      return Object.values(itemsMap).map(item => {
-          const inStock = stock[item.normalizedKey] || 0;
-          const needToBuy = Math.max(0, item.totalNeeded - inStock);
-          
-          let cost = 0;
-          if (item.pricePerUnit > 0) {
-               const pItem = pantry[item.normalizedKey];
-               if (pItem) {
-                  cost = calculateIngredientCost(needToBuy, item.unit, pItem.price, pItem.quantity, pItem.unit);
-               }
-          }
-          return { ...item, needToBuy, cost };
-      });
-  }, [selectedRecipes, recipes, pantry, stock, unitOverrides, periodMultiplier]);
+        // Iterate through each day in range to check recurring orders
+        const dayMap: Record<string, number> = {}; // recipeId -> totalQuantity
 
-  const totalCost = shoppingList.reduce((acc, item) => acc + item.cost, 0);
+        // 1. One-time orders in range
+        orders.filter(o => !o.isRecurring && o.recipeId && o.deliveryDate >= start && o.deliveryDate < end && o.status !== 'CANCELLED')
+              .forEach(o => {
+                  dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
+              });
 
-  const handleExportDoc = () => {
-    if (shoppingList.length === 0) return;
+        // 2. Recurring orders
+        const recurringOrders = orders.filter(o => o.isRecurring && o.recipeId && o.status !== 'CANCELLED');
+        
+        if (recurringOrders.length > 0) {
+            let current = new Date(start);
+            while (current.getTime() < end) {
+                const dayOfWeek = current.getDay(); // 0-6
+                recurringOrders.forEach(o => {
+                    if (o.recurringDays?.includes(dayOfWeek)) {
+                        dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
+                    }
+                });
+                current.setDate(current.getDate() + 1);
+            }
+        }
+
+        // Calculate ingredients based on dayMap
+        Object.entries(dayMap).forEach(([recipeId, count]) => {
+            const recipe = recipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+
+            recipe.ingredients.forEach(ing => {
+                const key = normalizeKey(ing.name);
+                const totalNeeded = ing.quantity * count;
+
+                if (ingredientsNeeded[key]) {
+                    ingredientsNeeded[key].quantity += totalNeeded;
+                } else {
+                    ingredientsNeeded[key] = {
+                        quantity: totalNeeded,
+                        unit: ing.unit
+                    };
+                }
+            });
+        });
+    }
+
+    // Compare with pantry
+    return Object.entries(ingredientsNeeded).map(([name, needed]) => {
+      const pantryItem = pantry[normalizeKey(name)];
+      let pantryQty = 0;
+      
+      if (pantryItem) {
+        if (pantryItem.unit !== needed.unit) {
+             const converted = convertUnit(pantryItem.quantity, pantryItem.unit, needed.unit);
+             if (converted !== null) pantryQty = converted;
+        } else {
+            pantryQty = pantryItem.quantity;
+        }
+      }
+
+      const toBuy = Math.max(0, needed.quantity - pantryQty);
+      
+      return {
+        name,
+        needed: needed.quantity,
+        inPantry: pantryQty,
+        toBuy,
+        unit: needed.unit
+      };
+    }).filter(item => item.toBuy > 0);
+  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate]);
+
+  const handleExport = () => {
+    const title = mode === 'MANUAL' 
+        ? `Lista de Compras (${t[selectedPeriod]})`
+        : `Lista de Compras (${startDate} - ${endDate})`;
 
     const content = `
       <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>Lista de Compras HorneFin</title>
+      <head><meta charset='utf-8'><title>${title}</title>
       <style>
         body { font-family: 'Arial', sans-serif; }
-        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
+        ul { list-style-type: none; padding: 0; }
+        li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .header { margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
       </style>
       </head><body>
-      <h1>Lista de Compras</h1>
-      <p>Generado: ${new Date().toLocaleDateString()}</p>
-      <p>Período: ${t[period.toLowerCase()]}</p>
-      
-      <h3>Para la producción de:</h3>
+      <div class="header">
+        <h1>${title}</h1>
+        ${mode === 'MANUAL' ? `
+        <p><strong>Recetas seleccionadas:</strong></p>
+        <ul>
+          ${Object.entries(selectedRecipes).map(([id, count]) => {
+             const r = recipes.find(rec => rec.id === id);
+             return r ? `<li>${count}x ${r.name}</li>` : '';
+          }).join('')}
+        </ul>
+        ` : ''}
+      </div>
+      <h2>Ingredientes a Comprar</h2>
       <ul>
-        ${selectedRecipes.map(sel => {
-            const r = recipes.find(x => x.id === sel.recipeId);
-            return `<li>${r ? r.name : 'Desconocido'} (x${sel.count * periodMultiplier})</li>`;
-        }).join('')}
+        ${shoppingList.map(item => `
+          <li>
+            <strong>${item.name}</strong>: ${item.toBuy.toFixed(2)} ${item.unit}
+            <br/><span style="font-size: 12px; color: #666;">(Necesario: ${item.needed.toFixed(2)} - En Despensa: ${item.inPantry.toFixed(2)})</span>
+          </li>
+        `).join('')}
       </ul>
-
-      <table>
-        <thead><tr><th>Ingrediente</th><th>Falta</th><th>Costo Est.</th></tr></thead>
-        <tbody>
-          ${shoppingList.filter(i => i.needToBuy > 0).map(item => `
-            <tr>
-              <td>${item.originalName}</td>
-              <td>${item.needToBuy.toFixed(2)} ${item.unit}</td>
-              <td>$${item.cost.toFixed(2)}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-        <tfoot>
-           <tr>
-             <td colspan="2"><strong>Total Estimado</strong></td>
-             <td><strong>$${totalCost.toFixed(2)}</strong></td>
-           </tr>
-        </tfoot>
-      </table>
       </body></html>
     `;
 
@@ -189,157 +185,175 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Lista_Compras_${new Date().toISOString().slice(0, 10)}.doc`;
+    link.download = `Compras_${new Date().toISOString().slice(0, 10)}.doc`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const handleWhatsApp = () => {
-    if (shoppingList.length === 0) return;
-
-    let text = `*Lista de Compras - HorneFin*\n`;
-    text += `*Período:* ${t[period.toLowerCase()]}\n\n`;
-    text += `*Producción:*\n`;
-    selectedRecipes.forEach(sel => {
-        const r = recipes.find(x => x.id === sel.recipeId);
-        if(r) text += `- ${r.name} (x${sel.count * periodMultiplier})\n`;
-    });
-
-    text += `\n*Necesitas Comprar:*\n`;
-    shoppingList.filter(i => i.needToBuy > 0).forEach(item => {
-        text += `[ ] ${item.needToBuy.toFixed(2)} ${item.unit} ${item.originalName}\n`;
-    });
-
-    text += `\n*Costo Est:* $${totalCost.toFixed(2)}`;
-
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    const text = `*Lista de Compras*\n\n` + shoppingList.map(item => 
+      `- ${item.name}: ${item.toBuy.toFixed(2)} ${item.unit}`
+    ).join('\n');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
   return (
-    <div className="pb-32 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-4 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex justify-between items-center">
-        <div>
-           <h1 className="text-xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
-             <span className="bg-orange-500 text-white p-1 rounded-lg"><Icons.Package size={18} /></span>
-             {t.shoppingTitle}
-           </h1>
-           <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.shoppingSubtitle}</p>
-        </div>
-        <div className="flex gap-2">
-            <select 
-                value={period} 
-                onChange={(e) => setPeriod(e.target.value as any)}
-                className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-bold py-2 px-3 rounded-xl border-none focus:ring-0 cursor-pointer"
+    <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
+      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
+          <span className="bg-emerald-600 text-white p-1.5 rounded-lg"><Icons.Package size={24} /></span>
+          {t.navShopping}
+        </h1>
+        
+        {/* Mode Toggle */}
+        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl mt-4">
+            <button 
+                onClick={() => setMode('MANUAL')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                <option value="DAY">{t.day}</option>
-                <option value="WEEK">{t.week}</option>
-                <option value="MONTH">{t.month}</option>
-            </select>
-            {selectedRecipes.length > 0 && (
-            <button onClick={clearAll} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition" title={t.clearList}><Icons.Trash size={20}/></button>
-            )}
+                {t.modeManual}
+            </button>
+            <button 
+                onClick={() => setMode('ORDERS')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'ORDERS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+            >
+                {t.modeOrders}
+            </button>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
-          <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-             <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider mb-2 block">{t.selectRecipe}</label>
-             <div className="flex gap-2">
-                 <select 
-                   className="flex-1 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white focus:outline-none focus:border-orange-500 appearance-none"
-                   value={selectedRecipeId}
-                   onChange={(e) => setSelectedRecipeId(e.target.value)}
-                 >
-                     <option value="">-- {t.selectRecipe} --</option>
-                     {recipes.map(r => (<option key={r.id} value={r.id}>{r.name}</option>))}
-                 </select>
-                 <button onClick={addRecipe} disabled={!selectedRecipeId} className="bg-orange-500 text-white px-5 rounded-xl font-bold disabled:opacity-50 hover:bg-orange-600 transition shadow-md shadow-orange-100">{t.add}</button>
-             </div>
-          </div>
+        
+        {/* Configuration Section */}
+        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+          
+          {mode === 'MANUAL' ? (
+              <>
+                <div className="mb-6">
+                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectPeriod}</label>
+                    <div className="flex gap-2">
+                    {(['day', 'week', 'month'] as const).map(p => (
+                        <button
+                        key={p}
+                        onClick={() => setSelectedPeriod(p)}
+                        className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
+                            selectedPeriod === p 
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' 
+                            : 'border-transparent bg-stone-100 dark:bg-stone-800 text-stone-500'
+                        }`}
+                        >
+                        {t[p]}
+                        </button>
+                    ))}
+                    </div>
+                </div>
 
-          {selectedRecipes.length > 0 && (
-              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                  {selectedRecipes.map((sel) => {
-                      const r = recipes.find(x => x.id === sel.recipeId);
-                      return (
-                          <div key={sel.recipeId} className="bg-white dark:bg-stone-900 p-3 rounded-2xl border border-stone-100 dark:border-stone-800 flex justify-between items-center shadow-sm">
-                              <span className="font-bold text-stone-800 dark:text-stone-200 ml-2">{r?.name}</span>
-                              <div className="flex items-center gap-3">
-                                  <div className="flex items-center bg-stone-50 dark:bg-stone-800 border dark:border-stone-700 rounded-xl overflow-hidden">
-                                      <span className="px-2 text-[10px] font-bold text-stone-400 uppercase">x</span>
-                                      <input 
-                                        type="number" 
-                                        className="w-12 py-1.5 pr-2 bg-transparent text-center font-bold dark:text-white focus:outline-none"
-                                        placeholder="0"
-                                        value={sel.count || ''}
-                                        onChange={(e) => updateCount(sel.recipeId, parseInt(e.target.value) || 0)}
-                                      />
-                                  </div>
-                                  <button onClick={() => removeRecipe(sel.recipeId)} className="p-2 text-stone-300 hover:text-red-500 transition"><Icons.Close size={18} /></button>
-                              </div>
-                          </div>
-                      );
-                  })}
-              </div>
-          )}
-
-          {shoppingList.length > 0 ? (
-              <div className="bg-white dark:bg-stone-900 rounded-3xl shadow-md border border-stone-100 dark:border-stone-800 overflow-hidden animate-in zoom-in-95">
-                  <div className="p-4 bg-stone-50 dark:bg-stone-800/50 flex justify-between items-center">
-                      <span className="font-bold text-stone-700 dark:text-stone-300 uppercase text-[10px] tracking-widest">{t.ingredientsCount}</span>
-                      <span className="text-[10px] text-stone-400">Total: {shoppingList.length}</span>
-                  </div>
-                  <div className="divide-y divide-stone-50 dark:divide-stone-800">
-                      {shoppingList.map((item, idx) => (
-                          <div key={idx} className="p-4 hover:bg-stone-50/50 transition-colors">
-                              <div className="flex justify-between items-start mb-3">
-                                  <div className="flex-1">
-                                      <p className="font-bold text-stone-800 dark:text-stone-200 capitalize leading-tight">{item.originalName}</p>
-                                      <div className="flex items-center gap-2 mt-1">
-                                          <span className="text-[10px] font-bold text-stone-400">{item.totalNeeded.toFixed(2)}</span>
-                                          <select className="text-[10px] bg-stone-100 dark:bg-stone-700 rounded px-1.5 py-0.5 border-none font-bold dark:text-white" value={item.unit} onChange={(e) => updateUnitOverride(item.normalizedKey, e.target.value)}>
-                                              <option value="kg">kg</option><option value="lb">lb</option><option value="g">g</option><option value="ml">ml</option><option value="l">l</option><option value="oz">oz</option><option value="u">u</option><option value="file">file</option>
-                                          </select>
-                                      </div>
-                                  </div>
-                                  <div className="text-right">
-                                      <p className="font-bold text-stone-900 dark:text-white">${item.cost.toFixed(2)}</p>
-                                  </div>
-                              </div>
-                              <div className="flex gap-4 items-center bg-stone-50 dark:bg-stone-800 p-2.5 rounded-xl border border-stone-100 dark:border-stone-700 shadow-inner">
-                                  <div className="flex-1">
-                                      <label className="text-[9px] uppercase font-bold text-stone-400 block mb-0.5">{t.inStock} ({item.unit})</label>
-                                      <input type="number" className="w-full bg-transparent font-bold text-stone-600 dark:text-stone-300 focus:outline-none text-sm" placeholder="0" value={stock[item.normalizedKey] || ''} onChange={(e) => updateStock(item.normalizedKey, parseFloat(e.target.value) || 0)} />
-                                  </div>
-                                  <div className="flex-1 border-l pl-4 border-stone-200 dark:border-stone-700">
-                                      <label className="text-[9px] uppercase font-bold text-orange-500 block mb-0.5">{t.need}</label>
-                                      <p className="font-bold text-orange-600 dark:text-orange-400 text-sm">{item.needToBuy.toFixed(2)} <span className="text-[10px]">{item.unit}</span></p>
-                                  </div>
-                              </div>
-                          </div>
-                      ))}
-                      <div className="p-5 bg-stone-900 dark:bg-black text-white flex justify-between items-center shadow-inner">
-                          <span className="font-bold text-sm tracking-wide">{t.totalShoppingCost}</span>
-                          <span className="text-2xl font-bold">${totalCost.toFixed(2)}</span>
-                      </div>
-                  </div>
-              </div>
+                <div>
+                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectRecipes}</label>
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    {recipes.map(recipe => (
+                        <div 
+                        key={recipe.id}
+                        onClick={() => toggleRecipe(recipe.id)}
+                        className={`p-3 rounded-xl border-2 cursor-pointer transition-all flex justify-between items-center ${
+                            selectedRecipes[recipe.id] 
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10' 
+                            : 'border-transparent bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700'
+                        }`}
+                        >
+                        <span className={`font-medium ${selectedRecipes[recipe.id] ? 'text-emerald-900 dark:text-emerald-100' : 'text-stone-600 dark:text-stone-400'}`}>
+                            {recipe.name}
+                        </span>
+                        
+                        {selectedRecipes[recipe.id] && (
+                            <div className="flex items-center gap-3 bg-white dark:bg-stone-900 rounded-lg px-2 py-1 shadow-sm" onClick={e => e.stopPropagation()}>
+                            <button 
+                                onClick={() => updateQuantity(recipe.id, -1)}
+                                className="w-6 h-6 flex items-center justify-center bg-stone-100 dark:bg-stone-800 rounded-full hover:bg-stone-200 text-stone-600"
+                            >-</button>
+                            <span className="font-bold text-sm w-4 text-center dark:text-white">{selectedRecipes[recipe.id]}</span>
+                            <button 
+                                onClick={() => updateQuantity(recipe.id, 1)}
+                                className="w-6 h-6 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900 rounded-full hover:bg-emerald-200 text-emerald-700"
+                            >+</button>
+                            </div>
+                        )}
+                        </div>
+                    ))}
+                    </div>
+                </div>
+              </>
           ) : (
-            selectedRecipes.length > 0 && (
-              <div className="text-center py-10 bg-white dark:bg-stone-900 rounded-3xl border border-stone-100 dark:border-stone-800 border-dashed">
-                 <p className="text-stone-400 text-sm">Ingresa cantidades para ver la lista</p>
+              // ORDERS MODE CONFIG
+              <div className="animate-in fade-in">
+                  <div className="flex gap-4 mb-4">
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.startDate}</label>
+                        <input 
+                            type="date" 
+                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                            value={startDate}
+                            onChange={e => setStartDate(e.target.value)}
+                        />
+                    </div>
+                    <div className="flex-1">
+                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.endDate}</label>
+                        <input 
+                            type="date" 
+                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                            value={endDate}
+                            onChange={e => setEndDate(e.target.value)}
+                        />
+                    </div>
+                  </div>
+                  <p className="text-xs text-stone-500 italic">
+                      Se calcularán los ingredientes necesarios para todos los pedidos (incluyendo recurrentes) dentro de este rango de fechas.
+                  </p>
               </div>
-            )
           )}
+        </div>
 
-          {shoppingList.length > 0 && (
-              <div className="grid grid-cols-2 gap-3 animate-in slide-in-from-bottom-5">
-                  <button onClick={handleExportDoc} className="py-4 bg-white dark:bg-stone-800 text-stone-800 dark:text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-sm border dark:border-stone-700 hover:bg-stone-50"><Icons.File size={18} /> {t.exportList}</button>
-                  <button onClick={handleWhatsApp} className="py-4 bg-orange-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-orange-100 hover:bg-orange-600 transition-transform active:scale-95"><Icons.Globe size={18} /> WhatsApp</button>
+        {/* Results */}
+        {shoppingList.length > 0 ? (
+          <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-stone-900 dark:text-white text-lg">{t.shoppingList}</h2>
+              <div className="flex gap-2">
+                <button onClick={handleWhatsApp} className="p-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition">
+                  <Icons.Share size={20} />
+                </button>
+                <button onClick={handleExport} className="p-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition">
+                  <Icons.Download size={20} />
+                </button>
               </div>
-          )}
+            </div>
+
+            <div className="space-y-3">
+              {shoppingList.map((item, idx) => (
+                <div key={idx} className="flex justify-between items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl">
+                  <div>
+                    <p className="font-bold text-stone-800 dark:text-white capitalize">{item.name}</p>
+                    <p className="text-xs text-stone-500">
+                      {t.needed}: {item.needed.toFixed(1)} {item.unit} • {t.inPantry}: {item.inPantry.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <span className="block text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                      {item.toBuy.toFixed(1)}
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-400 uppercase">{item.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-10 opacity-50">
+            <Icons.Package size={48} className="mx-auto mb-2 text-stone-300" />
+            <p className="text-stone-400 font-medium">{t.noItemsToBuy}</p>
+          </div>
+        )}
       </div>
     </div>
   );

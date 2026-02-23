@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { AppView, Recipe, PantryItem } from './types';
+import { AppView, Recipe, PantryItem, Order } from './types';
 import { Dashboard } from './components/Dashboard';
 import { CostAnalysis } from './components/CostAnalysis';
 import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
 import { Shopping } from './components/Shopping';
-import { NavBar } from './components/NavBar';
+import { Orders } from './components/Orders';
+import { Sidebar } from './components/Sidebar';
 import { Logo } from './components/Logo';
 import { Header } from './components/Header';
 import { TRANSLATIONS, Language } from './utils/translations';
@@ -54,6 +55,11 @@ export default function App() {
   
   const [pantry, setPantry] = useState<Record<string, PantryItem>>({});
   const [baseRecipes, setBaseRecipes] = useState<any[]>(PRESET_RECIPES);
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  // Sidebar State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Ref para rastrear la vista actual sin disparar efectos
   const currentViewRef = useRef(currentView);
@@ -80,6 +86,8 @@ export default function App() {
         if (parsed.baseRecipes) setBaseRecipes(parsed.baseRecipes);
         if (parsed.darkMode !== undefined) setDarkMode(parsed.darkMode);
         if (parsed.language) setLanguage(parsed.language);
+        if (parsed.orders) setOrders(parsed.orders);
+        if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(parsed.isSidebarCollapsed);
       } catch (e) {
         console.error("Error loading local data", e);
       }
@@ -93,10 +101,12 @@ export default function App() {
       pantry,
       baseRecipes,
       darkMode,
-      language
+      language,
+      orders,
+      isSidebarCollapsed
     };
     localStorage.setItem('hornefin_data', JSON.stringify(data));
-  }, [recipes, pantry, baseRecipes, darkMode, language]);
+  }, [recipes, pantry, baseRecipes, darkMode, language, orders, isSidebarCollapsed]);
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
@@ -132,6 +142,87 @@ export default function App() {
       document.documentElement.classList.remove('dark');
     }
   }, [darkMode]);
+
+  // Notificaciones de Pedidos
+  useEffect(() => {
+    // Solicitar permiso
+    if ("Notification" in window && Notification.permission !== "granted") {
+      Notification.requestPermission();
+    }
+
+    const checkNotifications = () => {
+      const now = Date.now();
+      
+      orders.forEach(order => {
+        if (order.status !== 'PENDING') return;
+
+        let targetTime = order.deliveryDate;
+        
+        // Si es recurrente, calculamos la próxima ocurrencia
+        if (order.isRecurring && order.recurringDays && order.deliveryTime) {
+            const [hours, minutes] = order.deliveryTime.split(':').map(Number);
+            const today = new Date();
+            const currentDay = today.getDay(); // 0-6
+            
+            // Buscar el próximo día válido
+            let daysUntil = -1;
+            for(let i=0; i<7; i++) {
+                const checkDay = (currentDay + i) % 7;
+                if (order.recurringDays.includes(checkDay)) {
+                    // Si es hoy, verificar si la hora ya pasó
+                    if (i === 0) {
+                        const orderDate = new Date();
+                        orderDate.setHours(hours, minutes, 0, 0);
+                        if (orderDate.getTime() > now) {
+                            daysUntil = 0;
+                            break;
+                        }
+                    } else {
+                        daysUntil = i;
+                        break;
+                    }
+                }
+            }
+            
+            if (daysUntil !== -1) {
+                const nextDate = new Date();
+                nextDate.setDate(nextDate.getDate() + daysUntil);
+                nextDate.setHours(hours, minutes, 0, 0);
+                targetTime = nextDate.getTime();
+            } else {
+                return; // No hay próxima ocurrencia cercana
+            }
+        }
+
+        const diff = targetTime - now;
+        const hoursDiff = diff / (1000 * 60 * 60);
+
+        // Check thresholds (approximate with 5 min window)
+        const thresholds = [24, 12, 6];
+        
+        thresholds.forEach(h => {
+             if (Math.abs(hoursDiff - h) < 0.1) { // Within 6 minutes
+                 // Check if we already notified for this specific threshold/order recently to avoid spam
+                 const key = `notif_${order.id}_${h}_${new Date().getDate()}`;
+                 if (!localStorage.getItem(key)) {
+                     if ("Notification" in window && Notification.permission === "granted") {
+                         new Notification(`Pedido Próximo: ${order.customerName}`, {
+                             body: `Faltan ${h} horas para entregar ${order.quantity}x ${order.product}`,
+                             icon: '/icon.png'
+                         });
+                     }
+                     localStorage.setItem(key, 'true');
+                 }
+             }
+        });
+      });
+    };
+
+    const interval = setInterval(checkNotifications, 5 * 60 * 1000); // Check every 5 mins
+    checkNotifications(); // Run immediately
+
+    return () => clearInterval(interval);
+  }, [orders]);
 
   const handleAddRecipe = (newRecipe: Recipe) => {
     setRecipes([newRecipe, ...recipes]);
@@ -244,7 +335,9 @@ export default function App() {
       recipes,
       pantry,
       darkMode,
-      language
+      language,
+      orders,
+      isSidebarCollapsed
     };
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -260,6 +353,20 @@ export default function App() {
   const handleRestoreBackup = (data: any) => {
       if (data.recipes) setRecipes(data.recipes);
       if (data.pantry) setPantry(data.pantry);
+      if (data.orders) setOrders(data.orders);
+      if (data.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(data.isSidebarCollapsed);
+  };
+
+  const handleAddOrder = (order: Order) => {
+    setOrders([order, ...orders]);
+  };
+
+  const handleUpdateOrder = (updatedOrder: Order) => {
+    setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+  };
+
+  const handleDeleteOrder = (id: string) => {
+    setOrders(orders.filter(o => o.id !== id));
   };
 
   const t = TRANSLATIONS[language];
@@ -267,81 +374,103 @@ export default function App() {
   if (loading) return <SplashScreen subtitle={t.logoSubtitle} />;
 
   return (
-    <div className={`max-w-md mx-auto min-h-screen relative shadow-2xl overflow-hidden font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-[#FAFAF9]'}`}>
+    <div className={`min-h-screen font-sans transition-colors duration-300 ${darkMode ? 'bg-stone-950' : 'bg-[#FAFAF9]'}`}>
       
-      {/* GLOBAL HEADER - Persistent */}
-      <Header 
-        darkMode={darkMode}
-        toggleDarkMode={() => setDarkMode(!darkMode)}
-        language={language}
-        setLanguage={setLanguage}
-        onDownloadBackup={handleDownloadBackup}
-        onRestoreBackup={handleRestoreBackup}
-        isCompact={currentView !== AppView.DASHBOARD}
+      {/* Sidebar Navigation */}
+      <Sidebar 
+        currentView={currentView}
+        onChangeView={setCurrentView}
         t={t}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        toggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
       />
 
-      {/* Views Container */}
-      <div className="h-full">
-        {currentView === AppView.DASHBOARD && (
-          <Dashboard 
-            recipes={recipes} 
-            onAddRecipe={handleAddRecipe}
-            onUpdateRecipe={handleUpdateRecipe}
-            onDeleteRecipe={handleDeleteRecipe}
-            onSelectRecipe={handleSelectRecipe}
-            onDuplicateRecipe={handleDuplicateRecipe}
-            baseRecipes={baseRecipes}
-            onAddToBase={handleAddToBase}
-            onUpdateBaseFromURL={handleUpdateBaseFromURL}
-            t={t}
-          />
-        )}
-
-        {currentView === AppView.PANTRY && (
-          <Pantry 
-            recipes={recipes} 
-            pantry={pantry} 
-            onUpdatePantry={handleUpdatePantry} 
-            t={t}
-          />
-        )}
-
-        {currentView === AppView.SUMMARY && (
-          <Summary 
-             recipes={recipes} 
-             pantry={pantry} 
-             t={t}
-          />
-        )}
+      {/* Main Content Area */}
+      <div className={`transition-all duration-300 min-h-screen flex flex-col ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'}`}>
         
-        {currentView === AppView.SHOPPING && (
-          <Shopping 
-             recipes={recipes} 
-             pantry={pantry}
-             t={t} 
-          />
-        )}
+        {/* GLOBAL HEADER - Persistent */}
+        <Header 
+          darkMode={darkMode}
+          toggleDarkMode={() => setDarkMode(!darkMode)}
+          language={language}
+          setLanguage={setLanguage}
+          onDownloadBackup={handleDownloadBackup}
+          onRestoreBackup={handleRestoreBackup}
+          isCompact={currentView !== AppView.DASHBOARD}
+          onToggleSidebar={() => setIsSidebarOpen(true)}
+          t={t}
+        />
 
-        {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
-          <CostAnalysis 
-            recipe={selectedRecipe}
-            pantry={pantry}
-            onUpdatePantry={handleUpdatePantry}
-            onUpdateRecipe={handleUpdateRecipe}
-            onBack={() => setCurrentView(AppView.DASHBOARD)}
-            initialEditMode={initialEditMode}
-            t={t}
-          />
-        )}
+        {/* Views Container */}
+        <main className="flex-1 w-full max-w-7xl mx-auto">
+          {currentView === AppView.DASHBOARD && (
+            <Dashboard 
+              recipes={recipes} 
+              onAddRecipe={handleAddRecipe}
+              onUpdateRecipe={handleUpdateRecipe}
+              onDeleteRecipe={handleDeleteRecipe}
+              onSelectRecipe={handleSelectRecipe}
+              onDuplicateRecipe={handleDuplicateRecipe}
+              baseRecipes={baseRecipes}
+              onAddToBase={handleAddToBase}
+              onUpdateBaseFromURL={handleUpdateBaseFromURL}
+              t={t}
+            />
+          )}
+
+          {currentView === AppView.ORDERS && (
+            <Orders 
+              orders={orders}
+              recipes={recipes}
+              onAddOrder={handleAddOrder}
+              onUpdateOrder={handleUpdateOrder}
+              onDeleteOrder={handleDeleteOrder}
+              t={t}
+            />
+          )}
+
+          {currentView === AppView.PANTRY && (
+            <Pantry 
+              recipes={recipes} 
+              pantry={pantry} 
+              onUpdatePantry={handleUpdatePantry} 
+              t={t}
+            />
+          )}
+
+          {currentView === AppView.SUMMARY && (
+            <Summary 
+               recipes={recipes} 
+               pantry={pantry} 
+               orders={orders}
+               t={t}
+            />
+          )}
+          
+          {currentView === AppView.SHOPPING && (
+            <Shopping 
+               recipes={recipes} 
+               pantry={pantry}
+               orders={orders}
+               t={t} 
+            />
+          )}
+
+          {currentView === AppView.COST_ANALYSIS && selectedRecipe && (
+            <CostAnalysis 
+              recipe={selectedRecipe}
+              pantry={pantry}
+              onUpdatePantry={handleUpdatePantry}
+              onUpdateRecipe={handleUpdateRecipe}
+              onBack={() => setCurrentView(AppView.DASHBOARD)}
+              initialEditMode={initialEditMode}
+              t={t}
+            />
+          )}
+        </main>
       </div>
-
-      {/* Persistent NavBar */}
-      <NavBar 
-        currentView={currentView} 
-        onChangeView={setCurrentView} 
-        t={t}
-      />
     </div>
   );
 }

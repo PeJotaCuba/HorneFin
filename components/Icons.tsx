@@ -33,7 +33,15 @@ import {
   UploadCloud,
   Share2,
   Copy,
-  MoreVertical
+  MoreVertical,
+  ClipboardList,
+  Truck,
+  Phone,
+  MessageCircle,
+  PhoneCall,
+  Menu,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export const Icons = {
@@ -70,5 +78,13 @@ export const Icons = {
   UploadDB: UploadCloud,
   Share: Share2,
   Copy,
-  More: MoreVertical
+  More: MoreVertical,
+  Orders: ClipboardList,
+  Delivery: Truck,
+  Phone,
+  Message: MessageCircle,
+  Call: PhoneCall,
+  Menu,
+  ChevronLeft,
+  ChevronRight
 };

@@ -240,7 +240,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   return (
-    <div className="pb-24 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300" ref={topRef}>
+    <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300" ref={topRef}>
       <div className="p-4 space-y-6">
         <div className="bg-white dark:bg-stone-900 rounded-3xl shadow-sm border border-stone-200 dark:border-stone-800 overflow-hidden">
           <div className="flex border-b border-stone-100 dark:border-stone-800">
@@ -276,7 +276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <input type="text" placeholder={t.ingredient} className="flex-grow min-w-0 p-2 rounded-lg border text-sm dark:bg-stone-700 dark:text-white" value={tempIngName} onChange={e => setTempIngName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddOrUpdateIngredient()} />
                   <input type="number" placeholder={t.qty} className="w-20 flex-shrink-0 p-2 rounded-lg border text-sm dark:bg-stone-700 dark:text-white" value={tempIngQty} onChange={e => setTempIngQty(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleAddOrUpdateIngredient()} />
                   <select className="w-24 flex-shrink-0 p-2 rounded-lg border text-sm dark:bg-stone-700 dark:text-white" value={tempIngUnit} onChange={e => setTempIngUnit(e.target.value)}>
-                    <option value="g">g</option><option value="kg">kg</option><option value="ml">ml</option><option value="l">l</option><option value="u">u</option><option value="cda">cda</option><option value="cdita">cdita</option><option value="taza">taza</option>
+                    <option value="g">g</option><option value="kg">kg</option><option value="oz">oz</option><option value="ml">ml</option><option value="l">l</option><option value="u">u</option><option value="cda">cda</option><option value="cdita">cdita</option><option value="taza">taza</option>
                   </select>
                 </div>
                 

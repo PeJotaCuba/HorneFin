@@ -177,7 +177,7 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-28 transition-colors duration-300">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-950 pb-8 transition-colors duration-300">
       {showPantryForm ? (
         <div className="fixed inset-0 z-[100] bg-stone-50 dark:bg-stone-950 flex flex-col h-[100dvh]">
           <div className="p-4 bg-white dark:bg-stone-900 border-b flex justify-between items-center shadow-sm">
