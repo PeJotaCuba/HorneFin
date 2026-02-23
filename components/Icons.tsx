@@ -32,7 +32,8 @@ import {
   Printer,
   UploadCloud,
   Share2,
-  Copy
+  Copy,
+  MoreVertical
 } from 'lucide-react';
 
 export const Icons = {
@@ -68,5 +69,6 @@ export const Icons = {
   Print: Printer,
   UploadDB: UploadCloud,
   Share: Share2,
-  Copy
+  Copy,
+  More: MoreVertical
 };

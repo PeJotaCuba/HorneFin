@@ -72,8 +72,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [tempIngUnit, setTempIngUnit] = useState('g');
   const [editingIngIndex, setEditingIngIndex] = useState<number | null>(null);
   const [showNotesModal, setShowNotesModal] = useState<Recipe | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   
   const topRef = useRef<HTMLDivElement>(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuId(null);
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
 
   const handleDownloadBase = () => {
     const data = JSON.stringify(baseRecipes, null, 2);
@@ -321,11 +329,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
           <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4 flex items-center gap-2"><Icons.Library size={20} className="text-amber-600" /> {t.savedRecipes}</h2>
           <div className="grid gap-4">
             {recipes.map((recipe) => (
-              <div key={recipe.id} onClick={() => onSelectRecipe(recipe)} className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex gap-4 cursor-pointer hover:border-amber-200 transition group relative overflow-hidden">
+              <div key={recipe.id} onClick={() => onSelectRecipe(recipe)} className="bg-white dark:bg-stone-900 p-3 rounded-2xl shadow-sm border border-stone-100 dark:border-stone-800 flex gap-4 cursor-pointer hover:border-amber-200 transition group relative overflow-visible">
                 <div className="w-20 h-20 rounded-xl overflow-hidden bg-stone-100 shrink-0"><img src={recipe.imageUrl || generateRecipeImage(recipe.name)} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt={recipe.name} /></div>
                 
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-                  <div>
+                  <div className="pr-8">
                       <h3 className="font-bold text-stone-900 dark:text-white truncate text-base">{recipe.name}</h3>
                       <p className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-1 mb-2">
                         <span className={`w-1.5 h-1.5 rounded-full ${recipe.mode === 'BATCH' ? 'bg-orange-400' : 'bg-green-400'}`}></span>
@@ -333,16 +341,39 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </p>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-auto">
-                    <button onClick={(e) => handleShare(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-green-600 transition" title={t.share}><Icons.Share size={16}/></button>
-                    <button onClick={(e) => handleShowNotes(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-blue-500 transition" title={t.notes}><Icons.Help size={16}/></button>
-                    
-                    <div className="w-px h-4 bg-stone-200 dark:bg-stone-700 mx-1"></div>
+                  {/* Menu Trigger */}
+                  <div className="absolute top-3 right-3">
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === recipe.id ? null : recipe.id); }}
+                        className="p-2 text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-full transition-colors"
+                      >
+                        <Icons.More size={20} />
+                      </button>
 
-                    <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-purple-500 transition" title={t.duplicate}><Icons.Copy size={16}/></button>
-                    <button onClick={(e) => { e.stopPropagation(); onAddToBase?.(recipe); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-green-500 transition" title={t.addToBase}><Icons.UploadDB size={16}/></button>
-                    <button onClick={(e) => handleStartEdit(e, recipe)} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-amber-600 transition" title={t.edit}><Icons.Edit size={16} /></button>
-                    <button onClick={(e) => {e.stopPropagation(); if(confirm(t.confirmDelete)) onDeleteRecipe?.(recipe.id); }} className="p-2 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-red-500 transition" title={t.delete}><Icons.Trash size={16} /></button>
+                      {/* Dropdown Menu */}
+                      {activeMenuId === recipe.id && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-stone-900 rounded-xl shadow-xl border border-stone-100 dark:border-stone-800 z-50 overflow-hidden animate-in fade-in zoom-in-95 origin-top-right">
+                            <button onClick={(e) => { e.stopPropagation(); handleShare(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.Share size={16} className="text-green-500"/> {t.share}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleShowNotes(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.Help size={16} className="text-blue-500"/> {t.notes}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.Copy size={16} className="text-purple-500"/> {t.duplicate}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); onAddToBase?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.UploadDB size={16} className="text-green-600"/> {t.addToBase}
+                            </button>
+                            <div className="h-px bg-stone-100 dark:bg-stone-800 my-1"></div>
+                            <button onClick={(e) => { handleStartEdit(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.Edit size={16} className="text-amber-500"/> {t.edit}
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); if(confirm(t.confirmDelete)) onDeleteRecipe?.(recipe.id); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-3">
+                                <Icons.Trash size={16}/> {t.delete}
+                            </button>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>

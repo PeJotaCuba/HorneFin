@@ -11,12 +11,58 @@ interface SummaryProps {
 }
 
 export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
+  const [period, setPeriod] = React.useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
+  const [selectedRecipes, setSelectedRecipes] = React.useState<{ recipeId: string; count: number }[]>(() => {
+      // Default to all recipes with count 1
+      return recipes.map(r => ({ recipeId: r.id, count: 1 }));
+  });
+
+  // Sync selected recipes when recipes prop changes (e.g. new recipe added)
+  // But preserve existing counts if possible
+  React.useEffect(() => {
+      setSelectedRecipes(prev => {
+          const newSelection = recipes.map(r => {
+              const existing = prev.find(p => p.recipeId === r.id);
+              return existing ? existing : { recipeId: r.id, count: 1 };
+          });
+          return newSelection;
+      });
+  }, [recipes.length]); // Only re-run if number of recipes changes
+
+  const periodMultiplier = {
+      'DAY': 1,
+      'WEEK': 6,
+      'MONTH': 24
+  }[period];
+
+  const updateCount = (id: string, count: number) => {
+      if (count < 0) return;
+      setSelectedRecipes(prev => prev.map(p => p.recipeId === id ? { ...p, count } : p));
+  };
+
+  const toggleRecipe = (id: string) => {
+      setSelectedRecipes(prev => {
+          const exists = prev.find(p => p.recipeId === id);
+          if (exists) {
+              return prev.filter(p => p.recipeId !== id);
+          } else {
+              return [...prev, { recipeId: id, count: 1 }];
+          }
+      });
+  };
+
   let totalRevenue = 0;
   let totalCosts = 0;
   let totalProfit = 0;
   const ingredientCosts: Record<string, number> = {};
 
-  recipes.forEach(recipe => {
+  selectedRecipes.forEach(sel => {
+    const recipe = recipes.find(r => r.id === sel.recipeId);
+    if (!recipe) return;
+
+    const quantity = sel.count * periodMultiplier;
+    if (quantity === 0) return;
+
     let recipeCost = 0;
     recipe.ingredients.forEach(ing => {
        const key = normalizeKey(ing.name);
@@ -26,7 +72,7 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
           cost = calculateIngredientCost(ing.quantity, ing.unit, pItem.price, pItem.quantity, pItem.unit);
        }
        recipeCost += cost;
-       ingredientCosts[key] = (ingredientCosts[key] || 0) + cost;
+       ingredientCosts[key] = (ingredientCosts[key] || 0) + (cost * quantity);
     });
 
     const otherExpenses = recipe.otherExpenses || 0;
@@ -34,9 +80,9 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
     const margin = recipe.profitMargin || 25;
     const price = recipe.suggestedPrice || (recipeCost > 0 ? recipeCost / (1 - (margin / 100)) : 0);
     
-    totalCosts += recipeCost;
-    totalRevenue += price;
-    totalProfit += (price - recipeCost);
+    totalCosts += recipeCost * quantity;
+    totalRevenue += price * quantity;
+    totalProfit += (price - recipeCost) * quantity;
   });
 
   const pieData = Object.entries(ingredientCosts)
@@ -59,14 +105,23 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
       </head><body>
       <h1>Resumen Financiero - HorneFin</h1>
       <p>Fecha: ${new Date().toLocaleDateString()}</p>
+      <p>Período: ${t[period.toLowerCase()]}</p>
       
+      <h3>Producción Planificada:</h3>
+      <ul>
+        ${selectedRecipes.filter(s => s.count > 0).map(sel => {
+            const r = recipes.find(x => x.id === sel.recipeId);
+            if (!r) return '';
+            return `<li>${r.name} (x${sel.count * periodMultiplier})</li>`;
+        }).join('')}
+      </ul>
+
       <h2>Totales Globales (Proyección)</h2>
       <ul>
         <li><strong>Costos Totales:</strong> $${totalCosts.toFixed(2)}</li>
         <li><strong>Ingresos Estimados:</strong> $${totalRevenue.toFixed(2)}</li>
         <li><strong>Ganancia Neta Potencial:</strong> $${totalProfit.toFixed(2)}</li>
       </ul>
-      <p><em>* Calculado asumiendo la venta de 1 unidad/lote de cada receta activa.</em></p>
 
       <h2>Distribución de Costos (Top Insumos)</h2>
       <table>
@@ -103,12 +158,56 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, t }) => {
           </h1>
           <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.summarySubtitle}</p>
         </div>
-        <button onClick={exportSummaryDoc} className="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition" title="Exportar Resumen">
-           <Icons.Download size={20} />
-        </button>
+        <div className="flex gap-2">
+            <select 
+                value={period} 
+                onChange={(e) => setPeriod(e.target.value as any)}
+                className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-bold py-2 px-3 rounded-xl border-none focus:ring-0 cursor-pointer"
+            >
+                <option value="DAY">{t.day}</option>
+                <option value="WEEK">{t.week}</option>
+                <option value="MONTH">{t.month}</option>
+            </select>
+            <button onClick={exportSummaryDoc} className="p-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition" title="Exportar Resumen">
+            <Icons.Download size={20} />
+            </button>
+        </div>
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Recipe Selection */}
+        <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+            <h3 className="font-bold text-stone-800 dark:text-white mb-3 text-xs uppercase tracking-widest">{t.selectRecipes}</h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {recipes.map(recipe => {
+                    const isSelected = selectedRecipes.some(s => s.recipeId === recipe.id);
+                    const count = selectedRecipes.find(s => s.recipeId === recipe.id)?.count || 0;
+                    
+                    return (
+                        <div key={recipe.id} className={`flex items-center justify-between p-2 rounded-xl border transition-colors ${isSelected ? 'bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700' : 'border-transparent hover:bg-stone-50 dark:hover:bg-stone-800/50'}`}>
+                            <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleRecipe(recipe.id)}>
+                                <div className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${isSelected ? 'bg-red-500 border-red-500 text-white' : 'border-stone-300 dark:border-stone-600'}`}>
+                                    {isSelected && <Icons.Check size={14} strokeWidth={3} />}
+                                </div>
+                                <span className={`text-sm font-bold ${isSelected ? 'text-stone-800 dark:text-stone-200' : 'text-stone-400'}`}>{recipe.name}</span>
+                            </div>
+                            {isSelected && (
+                                <div className="flex items-center bg-white dark:bg-stone-900 border dark:border-stone-700 rounded-lg overflow-hidden shadow-sm">
+                                    <span className="px-2 text-[10px] font-bold text-stone-400 uppercase">x</span>
+                                    <input 
+                                        type="number" 
+                                        className="w-12 py-1 pr-1 bg-transparent text-center font-bold text-sm dark:text-white focus:outline-none"
+                                        value={count}
+                                        onChange={(e) => updateCount(recipe.id, parseInt(e.target.value) || 0)}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
            <div className="bg-white dark:bg-stone-900 p-4 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
               <p className="text-[10px] font-bold text-stone-400 uppercase mb-1">{t.totalCosts}</p>

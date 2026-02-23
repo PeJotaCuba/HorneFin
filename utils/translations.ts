@@ -74,6 +74,14 @@ export const TRANSLATIONS = {
     baseUpdateError: "Error al actualizar la base",
     recipeAddedToBase: "Receta agregada a la base",
 
+    // Periods
+    period: "Período",
+    day: "Día (1)",
+    week: "Semana (6)",
+    month: "Mes (24)",
+    selectRecipes: "Seleccionar Recetas",
+    quantity: "Cantidad",
+
     // Reports
     reportTitle: "Reporte",
     reportDate: "Fecha",
@@ -212,6 +220,14 @@ export const TRANSLATIONS = {
     baseUpdateError: "Error updating base",
     recipeAddedToBase: "Recipe added to base",
 
+    // Periods
+    period: "Period",
+    day: "Day (1)",
+    week: "Week (6)",
+    month: "Month (24)",
+    selectRecipes: "Select Recipes",
+    quantity: "Quantity",
+
     // Reports
     reportTitle: "Report",
     reportDate: "Date",
@@ -349,6 +365,14 @@ export const TRANSLATIONS = {
     baseUpdated: "Base de receitas atualizada com sucesso",
     baseUpdateError: "Erro ao atualizar a base",
     recipeAddedToBase: "Receita adicionada à base",
+
+    // Periods
+    period: "Período",
+    day: "Dia (1)",
+    week: "Semana (6)",
+    month: "Mês (24)",
+    selectRecipes: "Selecionar Receitas",
+    quantity: "Quantidade",
 
     // Reports
     reportTitle: "Relatório",

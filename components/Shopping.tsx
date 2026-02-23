@@ -20,6 +20,7 @@ interface ShoppingItem {
 }
 
 export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
+  const [period, setPeriod] = useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
   // Initialize state from localStorage if available
   const [selectedRecipes, setSelectedRecipes] = useState<{ recipeId: string; count: number }[]>(() => {
     const saved = localStorage.getItem('hornefin_shopping_recipes');
@@ -86,6 +87,12 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
     }
   };
 
+  const periodMultiplier = {
+      'DAY': 1,
+      'WEEK': 6,
+      'MONTH': 24
+  }[period];
+
   const shoppingList = useMemo(() => {
       const itemsMap: Record<string, ShoppingItem> = {};
 
@@ -111,7 +118,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
               }
 
               const convertedQty = convertUnit(ing.quantity, ing.unit, targetUnit);
-              itemsMap[key].totalNeeded += convertedQty * (sel.count || 0);
+              itemsMap[key].totalNeeded += convertedQty * (sel.count || 0) * periodMultiplier;
           });
       });
 
@@ -128,7 +135,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
           }
           return { ...item, needToBuy, cost };
       });
-  }, [selectedRecipes, recipes, pantry, stock, unitOverrides]);
+  }, [selectedRecipes, recipes, pantry, stock, unitOverrides, periodMultiplier]);
 
   const totalCost = shoppingList.reduce((acc, item) => acc + item.cost, 0);
 
@@ -147,12 +154,13 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
       </head><body>
       <h1>Lista de Compras</h1>
       <p>Generado: ${new Date().toLocaleDateString()}</p>
+      <p>Período: ${t[period.toLowerCase()]}</p>
       
       <h3>Para la producción de:</h3>
       <ul>
         ${selectedRecipes.map(sel => {
             const r = recipes.find(x => x.id === sel.recipeId);
-            return `<li>${r ? r.name : 'Desconocido'} (x${sel.count})</li>`;
+            return `<li>${r ? r.name : 'Desconocido'} (x${sel.count * periodMultiplier})</li>`;
         }).join('')}
       </ul>
 
@@ -190,11 +198,12 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
   const handleWhatsApp = () => {
     if (shoppingList.length === 0) return;
 
-    let text = `*Lista de Compras - HorneFin*\n\n`;
+    let text = `*Lista de Compras - HorneFin*\n`;
+    text += `*Período:* ${t[period.toLowerCase()]}\n\n`;
     text += `*Producción:*\n`;
     selectedRecipes.forEach(sel => {
         const r = recipes.find(x => x.id === sel.recipeId);
-        if(r) text += `- ${r.name} (x${sel.count})\n`;
+        if(r) text += `- ${r.name} (x${sel.count * periodMultiplier})\n`;
     });
 
     text += `\n*Necesitas Comprar:*\n`;
@@ -218,9 +227,20 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, t }) => {
            </h1>
            <p className="text-stone-500 dark:text-stone-400 text-[10px] mt-0.5">{t.shoppingSubtitle}</p>
         </div>
-        {selectedRecipes.length > 0 && (
-           <button onClick={clearAll} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition" title={t.clearList}><Icons.Trash size={20}/></button>
-        )}
+        <div className="flex gap-2">
+            <select 
+                value={period} 
+                onChange={(e) => setPeriod(e.target.value as any)}
+                className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-bold py-2 px-3 rounded-xl border-none focus:ring-0 cursor-pointer"
+            >
+                <option value="DAY">{t.day}</option>
+                <option value="WEEK">{t.week}</option>
+                <option value="MONTH">{t.month}</option>
+            </select>
+            {selectedRecipes.length > 0 && (
+            <button onClick={clearAll} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-xl transition" title={t.clearList}><Icons.Trash size={20}/></button>
+            )}
+        </div>
       </div>
 
       <div className="p-4 space-y-6">
