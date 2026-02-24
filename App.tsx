@@ -82,60 +82,75 @@ export default function App() {
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        if (parsed.recipes) setRecipes(parsed.recipes);
-        if (parsed.pantry) setPantry(parsed.pantry);
-        if (parsed.baseRecipes) setBaseRecipes(parsed.baseRecipes);
-        if (parsed.darkMode !== undefined) setDarkMode(parsed.darkMode);
-        if (parsed.language) setLanguage(parsed.language);
-        if (parsed.orders) setOrders(parsed.orders);
-        if (parsed.sales) setSales(parsed.sales);
-        if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(parsed.isSidebarCollapsed);
+        if (Array.isArray(parsed.recipes)) setRecipes(parsed.recipes);
+        if (parsed.pantry && typeof parsed.pantry === 'object') setPantry(parsed.pantry);
+        if (Array.isArray(parsed.baseRecipes)) setBaseRecipes(parsed.baseRecipes);
+        if (parsed.darkMode !== undefined) setDarkMode(!!parsed.darkMode);
+        
+        if (parsed.language === 'ES' || parsed.language === 'EN' || parsed.language === 'PT') {
+            setLanguage(parsed.language);
+        } else {
+            setLanguage('ES');
+        }
+
+        if (Array.isArray(parsed.orders)) setOrders(parsed.orders);
+        if (Array.isArray(parsed.sales)) setSales(parsed.sales);
+        if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(!!parsed.isSidebarCollapsed);
       } catch (e) {
         console.error("Error loading local data", e);
+        // Fallback defaults are already set in useState
       }
     }
   }, []);
 
   // Guardar datos en LocalStorage cada vez que cambien
   useEffect(() => {
-    const data = {
-      recipes,
-      pantry,
-      baseRecipes,
-      darkMode,
-      language,
-      orders,
-      sales,
-      isSidebarCollapsed
-    };
-    localStorage.setItem('hornefin_data', JSON.stringify(data));
+    try {
+      const data = {
+        recipes,
+        pantry,
+        baseRecipes,
+        darkMode,
+        language,
+        orders,
+        sales,
+        isSidebarCollapsed
+      };
+      localStorage.setItem('hornefin_data', JSON.stringify(data));
+    } catch (e) {
+      console.error("Error saving to localStorage (quota exceeded?)", e);
+    }
   }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, isSidebarCollapsed]);
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
-    // Empujamos un estado inicial UNA VEZ al montar para "atrapar" el botón atrás
-    window.history.pushState({ view: 'app' }, '', window.location.href);
+    try {
+      // Empujamos un estado inicial UNA VEZ al montar para "atrapar" el botón atrás
+      window.history.pushState({ view: 'app' }, '', window.location.href);
 
-    const handlePopState = (event: PopStateEvent) => {
-      // Usamos el ref para saber dónde estamos sin depender del estado que reiniciaría el efecto
-      if (currentViewRef.current !== AppView.DASHBOARD) {
-        // Si no estamos en Dashboard, volvemos a Dashboard
-        setCurrentView(AppView.DASHBOARD);
-        // Restauramos el estado "trap" para el siguiente back
-        window.history.pushState({ view: 'app' }, '', window.location.href);
-      } else {
-        // Estamos en Dashboard, preguntamos si salir
-        const shouldExit = window.confirm(TRANSLATIONS[language].confirmExit);
-        if (!shouldExit) {
-          // Si cancela, restauramos el estado "trap"
+      const handlePopState = (event: PopStateEvent) => {
+        // Usamos el ref para saber dónde estamos sin depender del estado que reiniciaría el efecto
+        if (currentViewRef.current !== AppView.DASHBOARD) {
+          // Si no estamos en Dashboard, volvemos a Dashboard
+          setCurrentView(AppView.DASHBOARD);
+          // Restauramos el estado "trap" para el siguiente back
           window.history.pushState({ view: 'app' }, '', window.location.href);
+        } else {
+          // Estamos en Dashboard, preguntamos si salir
+          const shouldExit = window.confirm(TRANSLATIONS[language].confirmExit);
+          if (!shouldExit) {
+            // Si cancela, restauramos el estado "trap"
+            window.history.pushState({ view: 'app' }, '', window.location.href);
+          }
+          // Si acepta, no hacemos pushState, permitiendo que el navegador retroceda (salir)
         }
-        // Si acepta, no hacemos pushState, permitiendo que el navegador retroceda (salir)
-      }
-    };
+      };
 
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+      window.addEventListener('popstate', handlePopState);
+      return () => window.removeEventListener('popstate', handlePopState);
+    } catch (e) {
+      console.error("History API error", e);
+    }
   }, [language]); // Solo recreamos si cambia el idioma (para el mensaje de confirmación)
 
   useEffect(() => {
@@ -152,7 +167,7 @@ export default function App() {
       let profit = 0;
       let amount = 0;
 
-      if (recipeId) {
+      if (recipeId && Array.isArray(recipes)) {
           const recipe = recipes.find(r => r.id === recipeId);
           if (recipe) {
               const productionCost = recipe.ingredients.reduce((sum, ing) => {
@@ -181,176 +196,169 @@ export default function App() {
   // Notificaciones de Pedidos y Lógica de Facturación Automática
   useEffect(() => {
     // Solicitar permiso
-    if ("Notification" in window && Notification.permission !== "granted") {
-      Notification.requestPermission();
+    try {
+      if ("Notification" in window && Notification.permission !== "granted") {
+        Notification.requestPermission().catch(e => console.log("Notification permission denied/error", e));
+      }
+    } catch (e) {
+      console.error("Notification API error", e);
     }
 
     const checkOrders = () => {
-      const now = Date.now();
-      const newSales: Sale[] = [];
-      let ordersUpdated = false;
-      
-      const updatedOrders = orders.map(order => {
-        // 1. Automatic Billing for One-Time Orders
-        if (!order.isRecurring && order.status === 'PENDING' && order.deliveryDate <= now) {
-            const financials = calculateSaleFinancials(order.recipeId, order.quantity);
-            
-            newSales.push({
-                id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                orderId: order.id,
-                recipeId: order.recipeId,
-                recipeName: order.product,
-                quantity: order.quantity,
-                amount: financials.amount,
-                cost: financials.cost,
-                profit: financials.profit,
-                date: now,
-                type: 'ONE_TIME'
-            });
-            
-            ordersUpdated = true;
-            return { ...order, status: 'COMPLETED' as const };
-        }
-
-        // 2. Recurring Orders Logic
-        if (order.isRecurring && order.status !== 'CANCELLED' && order.recurringDays && order.deliveryTime) {
-            const [hours, minutes] = order.deliveryTime.split(':').map(Number);
-            const today = new Date();
-            const currentDay = today.getDay(); // 0-6
-            
-            // Check if today is a delivery day
-            if (order.recurringDays.includes(currentDay)) {
-                const deliveryTimeToday = new Date();
-                deliveryTimeToday.setHours(hours, minutes, 0, 0);
-                
-                // If delivery time has passed today
-                if (now >= deliveryTimeToday.getTime()) {
-                    // Check if we already processed this today
-                    const lastDelivery = order.lastDeliveryDate ? new Date(order.lastDeliveryDate) : null;
-                    const isProcessedToday = lastDelivery && 
-                                           lastDelivery.getDate() === today.getDate() && 
-                                           lastDelivery.getMonth() === today.getMonth() && 
-                                           lastDelivery.getFullYear() === today.getFullYear();
-
-                    if (!isProcessedToday) {
-                        // Request Confirmation Logic
-                        // We'll use a specific notification/alert for this
-                        // Since we can't block the loop with confirm(), we'll use a notification
-                        // that clicking it might trigger an action, or just rely on the user opening the app.
-                        // Ideally, we add a "Pending Confirmation" flag or similar, but for now,
-                        // let's just show a browser notification if permission granted.
-                        
-                        const key = `recur_confirm_${order.id}_${today.toDateString()}`;
-                        if (!localStorage.getItem(key)) {
-                             if ("Notification" in window && Notification.permission === "granted") {
-                                 const n = new Notification(TRANSLATIONS[language].confirmDelivery, {
-                                     body: `${order.product} - ${order.customerName}`,
-                                     icon: '/icon.png',
-                                     requireInteraction: true
-                                 });
-                                 n.onclick = () => {
-                                     window.focus();
-                                     // In a real app, this would open a specific modal.
-                                     // Here we rely on the user going to Orders/Finances.
-                                     // To make it robust, we should probably add a "needsConfirmation" state to the order
-                                     // but the prompt asked for "request confirmation".
-                                     // Let's trigger a window.confirm if the app is open/focused.
-                                 };
-                             }
-                             
-                             // If app is open, we can try to show a confirm dialog (but this blocks)
-                             // Better: Add to a "pending confirmations" queue in state?
-                             // For simplicity in this iteration: We will assume the user manually confirms in the UI
-                             // We will add a "Confirm Delivery" button in the Orders list for recurring orders that are due.
-                             localStorage.setItem(key, 'true');
-                        }
-                    }
-                }
-            }
-        }
-
-        // Notification Logic (Existing)
-        if (order.status === 'PENDING' || (order.isRecurring && order.status !== 'CANCELLED')) {
-             let targetTime = order.deliveryDate;
-             if (order.isRecurring && order.recurringDays && order.deliveryTime) {
-                 // ... (existing recurring logic for next occurrence) ...
-                 // Simplified for brevity as we are focusing on billing logic
-                 // We can keep the existing notification logic or merge it.
-                 // For now, let's keep the existing notification logic separate or below.
-             }
-        }
-
-        return order;
-      });
-
-      if (ordersUpdated) {
-          setOrders(updatedOrders);
-          setSales(prev => [...prev, ...newSales]);
-          if (newSales.length > 0) {
-              // Optional: Notify user of auto-billing
-              // alert("Pedidos facturados automáticamente");
+      try {
+        const now = Date.now();
+        const newSales: Sale[] = [];
+        let ordersUpdated = false;
+        
+        const updatedOrders = orders.map(order => {
+          // 1. Automatic Billing for One-Time Orders
+          if (!order.isRecurring && order.status === 'PENDING' && order.deliveryDate <= now) {
+              const financials = calculateSaleFinancials(order.recipeId, order.quantity);
+              
+              newSales.push({
+                  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                  orderId: order.id,
+                  recipeId: order.recipeId,
+                  recipeName: order.product,
+                  quantity: order.quantity,
+                  amount: financials.amount,
+                  cost: financials.cost,
+                  profit: financials.profit,
+                  date: now,
+                  type: 'ONE_TIME'
+              });
+              
+              ordersUpdated = true;
+              return { ...order, status: 'COMPLETED' as const };
           }
-      }
-      
-      // ... Existing Notification Logic ...
-      orders.forEach(order => {
-        if (order.status !== 'PENDING' && !order.isRecurring) return;
-        if (order.status === 'CANCELLED') return;
 
-        let targetTime = order.deliveryDate;
-        
-        if (order.isRecurring && order.recurringDays && order.deliveryTime) {
-            const [hours, minutes] = order.deliveryTime.split(':').map(Number);
-            const today = new Date();
-            const currentDay = today.getDay();
-            
-            let daysUntil = -1;
-            for(let i=0; i<7; i++) {
-                const checkDay = (currentDay + i) % 7;
-                if (order.recurringDays.includes(checkDay)) {
-                    if (i === 0) {
-                        const orderDate = new Date();
-                        orderDate.setHours(hours, minutes, 0, 0);
-                        if (orderDate.getTime() > now) {
-                            daysUntil = 0;
-                            break;
-                        }
-                    } else {
-                        daysUntil = i;
-                        break;
-                    }
-                }
-            }
-            
-            if (daysUntil !== -1) {
-                const nextDate = new Date();
-                nextDate.setDate(nextDate.getDate() + daysUntil);
-                nextDate.setHours(hours, minutes, 0, 0);
-                targetTime = nextDate.getTime();
-            } else {
-                return;
-            }
-        }
+          // 2. Recurring Orders Logic
+          if (order.isRecurring && order.status !== 'CANCELLED' && order.recurringDays && order.deliveryTime) {
+              const [hours, minutes] = order.deliveryTime.split(':').map(Number);
+              const today = new Date();
+              const currentDay = today.getDay(); // 0-6
+              
+              // Check if today is a delivery day
+              if (order.recurringDays.includes(currentDay)) {
+                  const deliveryTimeToday = new Date();
+                  deliveryTimeToday.setHours(hours, minutes, 0, 0);
+                  
+                  // If delivery time has passed today
+                  if (now >= deliveryTimeToday.getTime()) {
+                      // Check if we already processed this today
+                      const lastDelivery = order.lastDeliveryDate ? new Date(order.lastDeliveryDate) : null;
+                      const isProcessedToday = lastDelivery && 
+                                            lastDelivery.getDate() === today.getDate() && 
+                                            lastDelivery.getMonth() === today.getMonth() && 
+                                            lastDelivery.getFullYear() === today.getFullYear();
 
-        const diff = targetTime - now;
-        const hoursDiff = diff / (1000 * 60 * 60);
-        const thresholds = [24, 12, 6];
-        
-        thresholds.forEach(h => {
-             if (Math.abs(hoursDiff - h) < 0.1) {
-                 const key = `notif_${order.id}_${h}_${new Date().getDate()}`;
-                 if (!localStorage.getItem(key)) {
-                     if ("Notification" in window && Notification.permission === "granted") {
-                         new Notification(`Pedido Próximo: ${order.customerName}`, {
-                             body: `Faltan ${h} horas para entregar ${order.quantity}x ${order.product}`,
-                             icon: '/icon.png'
-                         });
-                     }
-                     localStorage.setItem(key, 'true');
-                 }
-             }
+                      if (!isProcessedToday) {
+                          // Request Confirmation Logic
+                          const key = `recur_confirm_${order.id}_${today.toDateString()}`;
+                          try {
+                            if (!localStorage.getItem(key)) {
+                                if ("Notification" in window && Notification.permission === "granted") {
+                                    try {
+                                      const n = new Notification(TRANSLATIONS[language].confirmDelivery, {
+                                          body: `${order.product} - ${order.customerName}`,
+                                          icon: '/icon.png',
+                                          requireInteraction: true
+                                      });
+                                      n.onclick = () => {
+                                          window.focus();
+                                      };
+                                    } catch (notifErr) {
+                                      console.error("Error creating notification", notifErr);
+                                    }
+                                }
+                                localStorage.setItem(key, 'true');
+                            }
+                          } catch (storageErr) {
+                            console.error("Storage error in recurring check", storageErr);
+                          }
+                      }
+                  }
+              }
+          }
+
+          return order;
         });
-      });
+
+        if (ordersUpdated) {
+            setOrders(updatedOrders);
+            setSales(prev => [...prev, ...newSales]);
+        }
+        
+        // ... Existing Notification Logic ...
+        orders.forEach(order => {
+          if (order.status !== 'PENDING' && !order.isRecurring) return;
+          if (order.status === 'CANCELLED') return;
+
+          let targetTime = order.deliveryDate;
+          
+          if (order.isRecurring && order.recurringDays && order.deliveryTime) {
+              const [hours, minutes] = order.deliveryTime.split(':').map(Number);
+              const today = new Date();
+              const currentDay = today.getDay();
+              
+              let daysUntil = -1;
+              for(let i=0; i<7; i++) {
+                  const checkDay = (currentDay + i) % 7;
+                  if (order.recurringDays.includes(checkDay)) {
+                      if (i === 0) {
+                          const orderDate = new Date();
+                          orderDate.setHours(hours, minutes, 0, 0);
+                          if (orderDate.getTime() > now) {
+                              daysUntil = 0;
+                              break;
+                          }
+                      } else {
+                          daysUntil = i;
+                          break;
+                      }
+                  }
+              }
+              
+              if (daysUntil !== -1) {
+                  const nextDate = new Date();
+                  nextDate.setDate(nextDate.getDate() + daysUntil);
+                  nextDate.setHours(hours, minutes, 0, 0);
+                  targetTime = nextDate.getTime();
+              } else {
+                  return;
+              }
+          }
+
+          const diff = targetTime - now;
+          const hoursDiff = diff / (1000 * 60 * 60);
+          const thresholds = [24, 12, 6];
+          
+          thresholds.forEach(h => {
+              if (Math.abs(hoursDiff - h) < 0.1) {
+                  const key = `notif_${order.id}_${h}_${new Date().getDate()}`;
+                  try {
+                    if (!localStorage.getItem(key)) {
+                        if ("Notification" in window && Notification.permission === "granted") {
+                            try {
+                              new Notification(`Pedido Próximo: ${order.customerName}`, {
+                                  body: `Faltan ${h} horas para entregar ${order.quantity}x ${order.product}`,
+                                  icon: '/icon.png'
+                              });
+                            } catch (nErr) {
+                              console.error("Notification creation error", nErr);
+                            }
+                        }
+                        localStorage.setItem(key, 'true');
+                    }
+                  } catch (sErr) {
+                    console.error("Storage error in notif check", sErr);
+                  }
+              }
+          });
+        });
+      } catch (err) {
+        console.error("Error in checkOrders loop", err);
+      }
     };
 
     const interval = setInterval(checkOrders, 60 * 1000); // Check every minute

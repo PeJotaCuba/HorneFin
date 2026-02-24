@@ -26,7 +26,11 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
   const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
+    try {
+      localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
+    } catch (e) {
+      console.error("Error saving summary preferences", e);
+    }
   }, [selectedRecipes]);
 
   // Orders/Sales Mode State
