@@ -54,28 +54,28 @@ export const Header: React.FC<HeaderProps> = ({
   };
 
   return (
-    <div className={`bg-white dark:bg-stone-900 shadow-sm sticky top-0 z-30 border-b border-stone-100 dark:border-stone-800 transition-all duration-300 ${isCompact ? 'py-2 px-4' : 'py-4 px-6'}`}>
+    <div className={`bg-white dark:bg-stone-900 shadow-sm sticky top-0 z-30 border-b border-stone-100 dark:border-stone-800 transition-all duration-300 ${isCompact ? 'py-2 px-3 sm:px-4' : 'py-3 sm:py-4 px-3 sm:px-6'}`}>
       <div className="flex justify-between items-center w-full">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 sm:gap-3">
             <button 
                 onClick={onToggleSidebar}
-                className="md:hidden p-2 -ml-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg"
+                className="md:hidden p-1.5 sm:p-2 -ml-1 sm:-ml-2 text-stone-500 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg"
             >
                 <Icons.Menu size={24} />
             </button>
             <div className="flex-shrink-0">
             <Logo 
-                className={`transition-all duration-300 ${isCompact ? 'h-10' : 'h-14'} w-auto`} 
+                className={`transition-all duration-300 ${isCompact ? 'h-8 sm:h-10' : 'h-10 sm:h-14'} w-auto`} 
                 showText={true} 
                 subtitle={t.logoSubtitle}
             />
             </div>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-1 sm:gap-2 items-center">
           
           <button 
             onClick={toggleLanguage}
-            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center font-bold text-xs ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
+            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center font-bold text-[10px] sm:text-xs ${isCompact ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-9 sm:h-9 p-1 sm:p-2'}`}
             title={t.language}
           >
              {language}
@@ -83,27 +83,27 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button 
             onClick={toggleDarkMode}
-            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
+            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-9 sm:h-9 p-1 sm:p-2'}`}
             title={t.darkMode}
           >
-             {darkMode ? <Icons.Sun size={isCompact ? 16 : 20} /> : <Icons.Moon size={isCompact ? 16 : 20} />}
+             {darkMode ? <Icons.Sun size={isCompact ? 14 : 18} className="sm:w-5 sm:h-5" /> : <Icons.Moon size={isCompact ? 14 : 18} className="sm:w-5 sm:h-5" />}
           </button>
           
           <button 
             onClick={onDownloadBackup}
-            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
+            className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-9 sm:h-9 p-1 sm:p-2'}`}
             title={t.downloadBackup}
           >
-             <Icons.Download size={isCompact ? 16 : 20} />
+             <Icons.Download size={isCompact ? 14 : 18} className="sm:w-5 sm:h-5" />
           </button>
 
           <div className="relative">
              <button 
                onClick={() => backupInputRef.current?.click()}
-               className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-8 h-8' : 'w-9 h-9 p-2'}`}
+               className={`rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700 transition flex items-center justify-center ${isCompact ? 'w-7 h-7 sm:w-8 sm:h-8' : 'w-8 h-8 sm:w-9 sm:h-9 p-1 sm:p-2'}`}
                title={t.uploadBackup}
              >
-               <Icons.UploadDB size={isCompact ? 16 : 20} />
+               <Icons.UploadDB size={isCompact ? 14 : 18} className="sm:w-5 sm:h-5" />
              </button>
              <input 
                 ref={backupInputRef}

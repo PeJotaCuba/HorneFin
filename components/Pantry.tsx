@@ -30,7 +30,7 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
       return existing || {
         name: keyToOriginalName[key] || key, 
         price: 0,
-        quantity: 1,
+        quantity: 0,
         unit: getDefaultUnit(keyToOriginalName[key] || key) 
       };
     });
@@ -104,7 +104,8 @@ export const Pantry: React.FC<PantryProps> = ({ recipes, pantry, onUpdatePantry,
                  <label className="text-[10px] uppercase font-bold text-stone-400 block mb-1">{t.qty}</label>
                  <input 
                     type="number" 
-                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-500 focus:outline-none dark:text-white"
+                    placeholder="0"
+                    className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center font-medium focus:border-amber-500 focus:outline-none dark:text-white placeholder-stone-400"
                     value={item.quantity === 0 ? '' : item.quantity}
                     onChange={(e) => handleUpdateItem(idx, 'quantity', parseFloat(e.target.value) || 0)}
                   />

@@ -68,10 +68,10 @@ export const Logo: React.FC<LogoProps> = ({
       {showText && (
         <div className="flex flex-col justify-center leading-none">
           <div className="flex items-baseline">
-            <span className="font-extrabold text-2xl text-[#5D2E1F] dark:text-amber-100 tracking-tight">Horne</span>
-            <span className="font-extrabold text-2xl text-[#D98E28] tracking-tight">Fin</span>
+            <span className="font-extrabold text-lg sm:text-2xl text-[#5D2E1F] dark:text-amber-100 tracking-tight">Horne</span>
+            <span className="font-extrabold text-lg sm:text-2xl text-[#D98E28] tracking-tight">Fin</span>
           </div>
-          <span className="text-[10px] uppercase tracking-wide text-stone-500 dark:text-stone-400 font-bold -mt-0.5 whitespace-nowrap">
+          <span className="text-[8px] sm:text-[10px] uppercase tracking-wide text-stone-500 dark:text-stone-400 font-bold -mt-0.5 whitespace-nowrap hidden sm:block">
             {subtitle}
           </span>
         </div>

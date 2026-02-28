@@ -8,7 +8,7 @@ interface DashboardProps {
   onAddRecipe: (recipe: Recipe) => void;
   onUpdateRecipe?: (recipe: Recipe) => void;
   onDeleteRecipe?: (id: string) => void;
-  onDuplicateRecipe?: (recipe: Recipe) => void;
+  onDuplicateRecipe?: (recipe: Recipe, multiplier?: number) => void;
   baseRecipes?: any[];
   onAddToBase?: (recipe: Recipe) => void;
   onUpdateBaseFromURL?: () => void;
@@ -377,9 +377,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <button onClick={(e) => { e.stopPropagation(); handleShowNotes(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
                                 <Icons.Help size={16} className="text-blue-500"/> {t.notes}
                             </button>
-                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
-                                <Icons.Copy size={16} className="text-purple-500"/> {t.duplicate}
+                            <div className="w-full px-4 py-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50 dark:bg-stone-800/50 flex items-center gap-2">
+                                <Icons.Copy size={12} className="text-purple-500"/> {t.duplicate}
+                            </div>
+                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 1); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
+                                Similar
                             </button>
+                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 2); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
+                                Doble
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 0.5); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
+                                Mitad
+                            </button>
+                            <div className="h-px bg-stone-100 dark:bg-stone-800 my-1"></div>
                             <button onClick={(e) => { e.stopPropagation(); onAddToBase?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
                                 <Icons.UploadDB size={16} className="text-green-600"/> {t.addToBase}
                             </button>

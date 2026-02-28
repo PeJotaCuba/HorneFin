@@ -211,27 +211,6 @@ export default function App() {
         let ordersUpdated = false;
         
         const updatedOrders = orders.map(order => {
-          // 1. Automatic Billing for One-Time Orders
-          if (!order.isRecurring && order.status === 'PENDING' && order.deliveryDate <= now) {
-              const financials = calculateSaleFinancials(order.recipeId, order.quantity);
-              
-              newSales.push({
-                  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                  orderId: order.id,
-                  recipeId: order.recipeId,
-                  recipeName: order.product,
-                  quantity: order.quantity,
-                  amount: financials.amount,
-                  cost: financials.cost,
-                  profit: financials.profit,
-                  date: now,
-                  type: 'ONE_TIME'
-              });
-              
-              ordersUpdated = true;
-              return { ...order, status: 'COMPLETED' as const };
-          }
-
           // 2. Recurring Orders Logic
           if (order.isRecurring && order.status !== 'CANCELLED' && order.recurringDays && order.deliveryTime) {
               const [hours, minutes] = order.deliveryTime.split(':').map(Number);
@@ -291,8 +270,7 @@ export default function App() {
         
         // ... Existing Notification Logic ...
         orders.forEach(order => {
-          if (order.status !== 'PENDING' && !order.isRecurring) return;
-          if (order.status === 'CANCELLED') return;
+          if (order.status !== 'PENDING') return;
 
           let targetTime = order.deliveryDate;
           
@@ -334,14 +312,16 @@ export default function App() {
           const thresholds = [24, 12, 6];
           
           thresholds.forEach(h => {
-              if (Math.abs(hoursDiff - h) < 0.1) {
+              // Trigger notification if we just passed the threshold (e.g., between 23.9 and 24.0 hours left)
+              // or if we are within the threshold and haven't notified yet.
+              if (hoursDiff > 0 && hoursDiff <= h) {
                   const key = `notif_${order.id}_${h}_${new Date().getDate()}`;
                   try {
                     if (!localStorage.getItem(key)) {
                         if ("Notification" in window && Notification.permission === "granted") {
                             try {
                               new Notification(`Pedido Próximo: ${order.customerName}`, {
-                                  body: `Faltan ${h} horas para entregar ${order.quantity}x ${order.product}`,
+                                  body: `Faltan aprox. ${h} horas para entregar ${order.quantity}x ${order.product}`,
                                   icon: '/icon.png'
                               });
                             } catch (nErr) {
@@ -432,11 +412,17 @@ export default function App() {
     }
   };
 
-  const handleDuplicateRecipe = (recipe: Recipe) => {
+  const handleDuplicateRecipe = (recipe: Recipe, multiplier: number = 1) => {
+    const suffix = multiplier === 2 ? ' (Doble)' : multiplier === 0.5 ? ' (Mitad)' : ' (Copia)';
+    const newIngredients = recipe.ingredients.map(ing => ({
+      ...ing,
+      quantity: ing.quantity * multiplier
+    }));
     const newRecipe: Recipe = {
       ...recipe,
       id: Date.now().toString(),
-      name: `${recipe.name} (Copia)`,
+      name: `${recipe.name}${suffix}`,
+      ingredients: newIngredients,
       createdAt: Date.now(),
       hasPricesConfigured: false // Reset prices configuration status for the copy
     };
@@ -531,6 +517,26 @@ export default function App() {
   };
 
   const handleUpdateOrder = (updatedOrder: Order) => {
+    const originalOrder = orders.find(o => o.id === updatedOrder.id);
+    
+    // If status changed to COMPLETED and it's a one-time order, generate a sale
+    if (originalOrder && originalOrder.status !== 'COMPLETED' && updatedOrder.status === 'COMPLETED' && !updatedOrder.isRecurring) {
+        const financials = calculateSaleFinancials(updatedOrder.recipeId, updatedOrder.quantity);
+        const newSale: Sale = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            orderId: updatedOrder.id,
+            recipeId: updatedOrder.recipeId,
+            recipeName: updatedOrder.product,
+            quantity: updatedOrder.quantity,
+            amount: financials.amount,
+            cost: financials.cost,
+            profit: financials.profit,
+            date: Date.now(),
+            type: 'ONE_TIME'
+        };
+        setSales(prev => [newSale, ...prev]);
+    }
+
     setOrders(orders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
   };
 

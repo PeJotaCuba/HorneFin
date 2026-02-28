@@ -36,6 +36,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
 
   const [contactPhoneOptions, setContactPhoneOptions] = useState<string[]>([]);
   const [showPhonePicker, setShowPhonePicker] = useState(false);
+  const [activeTab, setActiveTab] = useState<'PENDING' | 'COMPLETED'>('PENDING');
 
   const resetForm = () => {
     setCustomerName('');
@@ -174,9 +175,11 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
     alert("Exportando...");
   };
 
-  const sortedOrders = [...orders].sort((a, b) => {
-      return b.createdAt - a.createdAt;
-  });
+  const sortedOrders = [...orders]
+      .filter(o => activeTab === 'COMPLETED' ? o.status === 'COMPLETED' : o.status !== 'COMPLETED')
+      .sort((a, b) => {
+          return b.createdAt - a.createdAt;
+      });
 
   const weekDays = [
       { id: 1, label: t.monday },
@@ -234,6 +237,21 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
         >
           {isAdding ? <Icons.Close size={20} /> : <Icons.Plus size={20} />}
         </button>
+      </div>
+
+      <div className="flex border-b border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900">
+          <button 
+              onClick={() => setActiveTab('PENDING')} 
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'PENDING' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+          >
+              Pendientes
+          </button>
+          <button 
+              onClick={() => setActiveTab('COMPLETED')} 
+              className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'COMPLETED' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+          >
+              Entregas
+          </button>
       </div>
 
       <div className="p-4 space-y-6">
@@ -500,6 +518,22 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                     }
                     return null;
                 })()}
+
+                {/* Non-Recurring Confirmation Button */}
+                {!order.isRecurring && order.status === 'PENDING' && order.deliveryDate <= Date.now() && (
+                    <div className="mb-3 animate-pulse">
+                        <button 
+                            onClick={() => {
+                                if (confirm("¿Confirmar entrega de este pedido? Se moverá a la sección Entregas.")) {
+                                    onUpdateOrder({ ...order, status: 'COMPLETED' });
+                                }
+                            }}
+                            className="w-full py-2 bg-green-100 text-green-700 rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-green-200 transition border border-green-200"
+                        >
+                            <Icons.Check size={14} /> Confirmar Entrega
+                        </button>
+                    </div>
+                )}
 
                 {/* Contact Actions */}
                 {order.phone && (

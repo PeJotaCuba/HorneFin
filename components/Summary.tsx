@@ -297,6 +297,31 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
     document.body.removeChild(link);
   };
 
+  const handleShareWhatsApp = () => {
+    const title = mode === 'MANUAL' 
+        ? `Reporte Financiero (${t[selectedPeriod]})`
+        : `Reporte Financiero (${startDate} - ${endDate})`;
+
+    let text = `*${title}*\n\n`;
+    text += `*Ingresos Totales:* $${financials.revenue.toFixed(2)}\n`;
+    text += `*Costos Totales:* $${financials.cost.toFixed(2)}\n`;
+    text += `*Ganancia Neta:* $${financials.profit.toFixed(2)}\n`;
+    text += `*Margen:* ${financials.revenue > 0 ? ((financials.profit / financials.revenue) * 100).toFixed(1) : 0}%\n\n`;
+    
+    text += `*Top 5 Ingredientes (Costos)*\n`;
+    financials.topIngredients.forEach(i => {
+        text += `- ${i.name}: $${i.value.toFixed(2)}\n`;
+    });
+    
+    text += `\n*Detalle por Receta*\n`;
+    financials.breakdown.forEach(item => {
+        text += `- ${item.name} (x${item.count}): Ingreso $${item.revenue.toFixed(2)} | Costo $${item.cost.toFixed(2)} | Ganancia $${item.profit.toFixed(2)}\n`;
+    });
+
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
@@ -497,13 +522,22 @@ export const Summary: React.FC<SummaryProps> = ({ recipes, pantry, orders = [], 
               )}
             </div>
 
-            <button 
-                onClick={handleExport}
-                className="w-full py-4 bg-stone-900 dark:bg-stone-700 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2"
-            >
-                <Icons.Download size={20} />
-                {t.exportReport}
-            </button>
+            <div className="flex gap-3">
+              <button 
+                  onClick={handleExport}
+                  className="flex-1 py-4 bg-stone-900 dark:bg-stone-700 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 transition hover:bg-black dark:hover:bg-stone-600"
+              >
+                  <Icons.Download size={20} />
+                  DOCX
+              </button>
+              <button 
+                  onClick={handleShareWhatsApp}
+                  className="flex-1 py-4 bg-green-600 text-white rounded-2xl font-bold shadow-lg flex items-center justify-center gap-2 transition hover:bg-green-700"
+              >
+                  <Icons.Message size={20} />
+                  WhatsApp
+              </button>
+            </div>
           </div>
         ) : (
           <div className="text-center py-10 opacity-50">
