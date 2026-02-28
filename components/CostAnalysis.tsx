@@ -193,12 +193,12 @@ export const CostAnalysis: React.FC<CostAnalysisProps> = ({
                     <label className="text-[10px] font-bold text-stone-400 uppercase">{t.purchasePrice}</label>
                     <div className="relative">
                        <span className="absolute left-3 top-2.5 text-stone-400">$</span>
-                       <input type="number" className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg dark:text-white focus:border-amber-500 focus:outline-none" value={item.price || ''} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, price: parseFloat(e.target.value) || 0}})} />
+                       <input type="number" placeholder="0.00" className="w-full pl-6 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg dark:text-white focus:border-amber-500 focus:outline-none placeholder-stone-400" value={item.price === 0 ? '' : item.price} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, price: parseFloat(e.target.value) || 0}})} />
                     </div>
                   </div>
                   <div className="w-20">
                     <label className="text-[10px] font-bold text-stone-400 uppercase">{t.qty}</label>
-                    <input type="number" className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-amber-500 focus:outline-none" value={item.quantity || ''} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, quantity: parseFloat(e.target.value) || 0}})} />
+                    <input type="number" placeholder="0" className="w-full p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg text-center dark:text-white focus:border-amber-500 focus:outline-none placeholder-stone-400" value={item.quantity === 0 ? '' : item.quantity} onChange={e => setPantryFormValues({...pantryFormValues, [normalizeKey(item.name)]: {...item, quantity: parseFloat(e.target.value) || 0}})} />
                   </div>
                   <div className="w-24">
                      <label className="text-[10px] font-bold text-stone-400 uppercase">{t.unit}</label>
