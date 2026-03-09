@@ -74,6 +74,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const [showNotesModal, setShowNotesModal] = useState<Recipe | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [menuPosition, setMenuPosition] = useState<'top' | 'bottom'>('bottom');
+  const [duplicateModal, setDuplicateModal] = useState<{recipe: Recipe, multiplier: number} | null>(null);
+  const [duplicateMultiplier, setDuplicateMultiplier] = useState<string>('1');
   
   const topRef = useRef<HTMLDivElement>(null);
 
@@ -377,17 +379,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             <button onClick={(e) => { e.stopPropagation(); handleShowNotes(e, recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
                                 <Icons.Help size={16} className="text-blue-500"/> {t.notes}
                             </button>
-                            <div className="w-full px-4 py-2 text-[10px] font-bold text-stone-400 uppercase tracking-wider bg-stone-50 dark:bg-stone-800/50 flex items-center gap-2">
-                                <Icons.Copy size={12} className="text-purple-500"/> {t.duplicate}
-                            </div>
-                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 1); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                {t.similar}
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 2); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                {t.double}
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 0.5); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                {t.half}
+                            <button onClick={(e) => { e.stopPropagation(); setDuplicateModal({recipe, multiplier: 1}); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
+                                <Icons.Copy size={16} className="text-purple-500"/> {t.duplicate}
                             </button>
                             <div className="h-px bg-stone-100 dark:bg-stone-800 my-1"></div>
                             <button onClick={(e) => { e.stopPropagation(); onAddToBase?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
@@ -402,9 +395,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             </button>
                         </div>
                       )}
+                    </div>
                   </div>
                 </div>
-              </div>
             ))}
             {recipes.length === 0 && (
               <div className="text-center py-10 bg-white dark:bg-stone-900 rounded-3xl border border-stone-100 dark:border-stone-800 border-dashed">
@@ -427,6 +420,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="max-h-[60vh] overflow-y-auto pr-2">
                 <p className="text-sm text-stone-600 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">{showNotesModal.notes || t.noNotes}</p>
               </div>
+           </div>
+        </div>
+      )}
+      {duplicateModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+           <div className="bg-white dark:bg-stone-900 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
+              <button onClick={() => setDuplicateModal(null)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-600"><Icons.Close size={24}/></button>
+              <h3 className="font-bold text-stone-900 dark:text-white mb-4">{t.duplicate} {duplicateModal.recipe.name}</h3>
+              <label className="text-xs font-bold text-stone-400 uppercase mb-1 block">Proporción (0.5 - 10)</label>
+              <input 
+                type="number" 
+                step="0.1" 
+                min="0.5" 
+                max="10" 
+                value={duplicateMultiplier} 
+                onChange={e => setDuplicateMultiplier(e.target.value)}
+                className="w-full p-3 mb-4 bg-stone-50 dark:bg-stone-800 rounded-xl border dark:border-stone-700 dark:text-white"
+              />
+              <button 
+                onClick={() => {
+                  const mult = parseFloat(duplicateMultiplier);
+                  if (mult >= 0.5 && mult <= 10) {
+                    onDuplicateRecipe?.(duplicateModal.recipe, mult);
+                    setDuplicateModal(null);
+                  } else {
+                    alert('Por favor ingresa un número entre 0.5 y 10');
+                  }
+                }}
+                className="w-full py-4 bg-amber-600 text-white rounded-xl font-bold shadow-lg hover:bg-amber-700 transition-all"
+              >
+                {t.duplicate}
+              </button>
            </div>
         </div>
       )}

@@ -429,7 +429,7 @@ export default function App() {
   };
 
   const handleDuplicateRecipe = (recipe: Recipe, multiplier: number = 1) => {
-    const suffix = multiplier === 2 ? ' (Doble)' : multiplier === 0.5 ? ' (Mitad)' : ' (Copia)';
+    const suffix = multiplier === 2 ? ` (${t.double})` : multiplier === 0.5 ? ` (${t.half})` : ` (x${multiplier})`;
     const newIngredients = recipe.ingredients.map(ing => ({
       ...ing,
       quantity: ing.quantity * multiplier

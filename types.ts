@@ -66,9 +66,11 @@ export interface Debt {
   debtorName: string;
   product: string;
   recipeId?: string;
+  quantity: number;
+  unitPrice: number;
   amount: number;
   date: number;
-  isBatch?: boolean;
+  isBatch: boolean;
 }
 
 export interface UnsoldProduct {
@@ -76,9 +78,10 @@ export interface UnsoldProduct {
   name: string;
   recipeId?: string;
   quantity: number;
-  totalValue?: number;
+  unitPrice: number;
+  amount: number;
   date: number;
-  isBatch?: boolean;
+  isBatch: boolean;
 }
 
 export interface Sale {

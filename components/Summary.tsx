@@ -56,32 +56,49 @@ export const Summary: React.FC<SummaryProps> = ({
   const [newDebtName, setNewDebtName] = useState('');
   const [newDebtRecipeId, setNewDebtRecipeId] = useState('');
   const [newDebtIsBatch, setNewDebtIsBatch] = useState(false);
+  const [newDebtQty, setNewDebtQty] = useState('');
+  const [newDebtUnitPrice, setNewDebtUnitPrice] = useState('');
   const [newDebtAmount, setNewDebtAmount] = useState('');
 
   // Productos State
   const [newUnsoldRecipeId, setNewUnsoldRecipeId] = useState('');
   const [newUnsoldQty, setNewUnsoldQty] = useState('');
+  const [newUnsoldUnitPrice, setNewUnsoldUnitPrice] = useState('');
   const [newUnsoldIsBatch, setNewUnsoldIsBatch] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
   }, [selectedRecipes]);
 
-  // Auto-calculate debt amount when recipe or batch mode changes
+  // Auto-calculate debt/unsold amount when recipe, batch mode, or qty changes
   useEffect(() => {
     if (newDebtRecipeId) {
       const recipe = recipes.find(r => r.id === newDebtRecipeId);
       if (recipe) {
-        const cost = calculateRecipeCost(recipe);
-        const margin = recipe.profitMargin || 0;
-        const price = margin < 100 ? cost / (1 - (margin / 100)) : cost;
-        const finalPrice = newDebtIsBatch ? price * (recipe.batchSize || 1) : price;
-        setNewDebtAmount(finalPrice.toFixed(2));
+        const price = recipe.suggestedPrice || 0;
+        const unitPrice = newDebtIsBatch ? price * (recipe.batchSize || 1) : price;
+        setNewDebtUnitPrice(unitPrice.toFixed(2));
+        const qty = parseFloat(newDebtQty) || 0;
+        setNewDebtAmount((unitPrice * qty).toFixed(2));
       }
     } else {
+      setNewDebtUnitPrice('');
       setNewDebtAmount('');
     }
-  }, [newDebtRecipeId, newDebtIsBatch, recipes, pantry]);
+  }, [newDebtRecipeId, newDebtIsBatch, newDebtQty, recipes]);
+
+  useEffect(() => {
+    if (newUnsoldRecipeId) {
+      const recipe = recipes.find(r => r.id === newUnsoldRecipeId);
+      if (recipe) {
+        const price = recipe.suggestedPrice || 0;
+        const unitPrice = newUnsoldIsBatch ? price * (recipe.batchSize || 1) : price;
+        setNewUnsoldUnitPrice(unitPrice.toFixed(2));
+      }
+    } else {
+      setNewUnsoldUnitPrice('');
+    }
+  }, [newUnsoldRecipeId, newUnsoldIsBatch, recipes]);
 
   const calculateRecipeCost = (recipe: Recipe) => {
     return recipe.ingredients.reduce((sum, ing) => {
@@ -123,12 +140,13 @@ export const Summary: React.FC<SummaryProps> = ({
 
   const addDebt = () => {
     if (newDebtName && newDebtRecipeId && newDebtAmount) {
-      const recipe = recipes.find(r => r.id === newDebtRecipeId);
       const debt: Debt = {
         id: Date.now().toString(),
         debtorName: newDebtName,
-        product: recipe ? recipe.name : '',
+        product: recipes.find(r => r.id === newDebtRecipeId)?.name || '',
         recipeId: newDebtRecipeId,
+        quantity: parseFloat(newDebtQty) || 0,
+        unitPrice: parseFloat(newDebtUnitPrice) || 0,
         amount: parseFloat(newDebtAmount),
         date: Date.now(),
         isBatch: newDebtIsBatch
@@ -136,6 +154,8 @@ export const Summary: React.FC<SummaryProps> = ({
       onUpdateDebts([debt, ...debts]);
       setNewDebtName('');
       setNewDebtRecipeId('');
+      setNewDebtQty('');
+      setNewDebtUnitPrice('');
       setNewDebtAmount('');
       setNewDebtIsBatch(false);
     }
@@ -148,27 +168,24 @@ export const Summary: React.FC<SummaryProps> = ({
   const addUnsoldProduct = () => {
     if (newUnsoldRecipeId && newUnsoldQty) {
       const recipe = recipes.find(r => r.id === newUnsoldRecipeId);
-      let totalValue = 0;
-      if (recipe) {
-        const cost = calculateRecipeCost(recipe);
-        const margin = recipe.profitMargin || 0;
-        const price = margin < 100 ? cost / (1 - (margin / 100)) : cost;
-        const finalPrice = newUnsoldIsBatch ? price * (recipe.batchSize || 1) : price;
-        totalValue = finalPrice * parseInt(newUnsoldQty, 10);
-      }
+      const unitPrice = parseFloat(newUnsoldUnitPrice) || 0;
+      const qty = parseInt(newUnsoldQty, 10) || 0;
+      const amount = unitPrice * qty;
 
       const prod: UnsoldProduct = {
         id: Date.now().toString(),
         name: recipe ? recipe.name : '',
         recipeId: newUnsoldRecipeId,
-        quantity: parseInt(newUnsoldQty, 10),
-        totalValue,
+        quantity: qty,
+        unitPrice: unitPrice,
+        amount: amount,
         date: Date.now(),
         isBatch: newUnsoldIsBatch
       };
       onUpdateUnsoldProducts([prod, ...unsoldProducts]);
       setNewUnsoldRecipeId('');
       setNewUnsoldQty('');
+      setNewUnsoldUnitPrice('');
       setNewUnsoldIsBatch(false);
     }
   };
@@ -271,6 +288,7 @@ export const Summary: React.FC<SummaryProps> = ({
 
     const totalDebts = debts.reduce((sum, d) => sum + d.amount, 0);
     const totalUnsold = unsoldProducts.reduce((sum, p) => sum + p.quantity, 0);
+    const totalUnsoldValue = unsoldProducts.reduce((sum, p) => sum + p.amount, 0);
 
     const pieData = Object.entries(ingredientCosts)
       .filter(([_, value]) => value > 0)
@@ -282,6 +300,7 @@ export const Summary: React.FC<SummaryProps> = ({
       profit: totalRevenue - totalCost,
       totalDebts,
       totalUnsold,
+      totalUnsoldValue,
       pieData
     };
   }, [recipes, selectedRecipes, pantry, sales, debts, unsoldProducts, linkOrdersToSales]);
@@ -356,7 +375,7 @@ export const Summary: React.FC<SummaryProps> = ({
       cost: financials.cost,
       profit: financials.profit,
       totalDebts: financials.totalDebts,
-      totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + (p.totalValue || 0), 0),
+      totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + p.amount, 0),
       salesCount: Object.keys(selectedRecipes).length + (linkOrdersToSales ? sales.filter(s => new Date(s.date).toISOString().split('T')[0] === summaryDate).length : 0),
       debtsCount: debts.length,
       unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0)
@@ -484,22 +503,36 @@ export const Summary: React.FC<SummaryProps> = ({
                    </label>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <input 
+                  type="number" 
+                  placeholder={t.qty || "Cant."} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newDebtQty}
+                  onChange={e => setNewDebtQty(e.target.value)}
+                />
+                <input 
+                  type="number" 
+                  placeholder={t.unitPrice || "Precio U."} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newDebtUnitPrice}
+                  onChange={e => setNewDebtUnitPrice(e.target.value)}
+                />
                 <input 
                   type="number" 
                   placeholder={t.amount || "Monto"} 
-                  className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newDebtAmount}
                   onChange={e => setNewDebtAmount(e.target.value)}
                 />
-                <button 
-                  onClick={addDebt}
-                  disabled={!newDebtName || !newDebtRecipeId || !newDebtAmount}
-                  className="px-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 text-sm flex items-center justify-center"
-                >
-                  <Icons.Plus size={16} />
-                </button>
               </div>
+              <button 
+                onClick={addDebt}
+                disabled={!newDebtName || !newDebtRecipeId || !newDebtAmount}
+                className="w-full py-2 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+              >
+                <Icons.Plus size={16} /> {t.add || 'Añadir'}
+              </button>
             </div>
 
             <div className="space-y-2 flex-1 overflow-y-auto max-h-40">
@@ -553,9 +586,16 @@ export const Summary: React.FC<SummaryProps> = ({
                 <input 
                   type="number" 
                   placeholder={t.qty || "Cant."} 
-                  className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  className="w-16 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newUnsoldQty}
                   onChange={e => setNewUnsoldQty(e.target.value)}
+                />
+                <input 
+                  type="number" 
+                  placeholder={t.unitPrice || "Precio U."} 
+                  className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newUnsoldUnitPrice}
+                  onChange={e => setNewUnsoldUnitPrice(e.target.value)}
                 />
                 <button 
                   onClick={addUnsoldProduct}
@@ -569,14 +609,13 @@ export const Summary: React.FC<SummaryProps> = ({
 
             <div className="space-y-2 flex-1 overflow-y-auto max-h-48">
               {unsoldProducts.map(prod => (
-                <div key={prod.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center">
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <span className="font-medium text-stone-700 dark:text-stone-300 text-sm truncate">{prod.name} {prod.isBatch ? `(${t.batch || 'Lote'})` : ''}</span>
-                    <span className="text-xs text-stone-500">{t.qty || 'Cant:'} {prod.quantity}</span>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="font-bold text-stone-600 dark:text-stone-400 text-sm">${(prod.totalValue || 0).toFixed(2)}</span>
-                    <button onClick={() => removeUnsoldProduct(prod.id)} className="text-stone-400 hover:text-red-500"><Icons.Close size={16} /></button>
+                <div key={prod.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 grid grid-cols-4 gap-2 items-center">
+                  <span className="font-medium text-stone-700 dark:text-stone-300 text-xs truncate">{prod.name}</span>
+                  <input type="number" className="p-1 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 dark:text-white text-xs text-center" value={prod.quantity} onChange={e => onUpdateUnsoldProducts(unsoldProducts.map(p => p.id === prod.id ? {...p, quantity: parseInt(e.target.value) || 0, amount: (parseInt(e.target.value) || 0) * p.unitPrice} : p))} />
+                  <input type="number" className="p-1 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 dark:text-white text-xs text-center" value={prod.unitPrice} onChange={e => onUpdateUnsoldProducts(unsoldProducts.map(p => p.id === prod.id ? {...p, unitPrice: parseFloat(e.target.value) || 0, amount: p.quantity * (parseFloat(e.target.value) || 0)} : p))} />
+                  <div className="flex items-center justify-between gap-1">
+                    <input type="number" className="p-1 bg-white dark:bg-stone-700 rounded border border-stone-200 dark:border-stone-600 dark:text-white text-xs text-center w-full" value={prod.amount} onChange={e => onUpdateUnsoldProducts(unsoldProducts.map(p => p.id === prod.id ? {...p, amount: parseFloat(e.target.value) || 0} : p))} />
+                    <button onClick={() => removeUnsoldProduct(prod.id)} className="text-stone-400 hover:text-red-500"><Icons.Close size={14} /></button>
                   </div>
                 </div>
               ))}
