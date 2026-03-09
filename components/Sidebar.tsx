@@ -28,6 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: AppView.PANTRY, icon: Icons.Money, label: t.navCosts },
     { id: AppView.SHOPPING, icon: Icons.Package, label: t.navShopping },
     { id: AppView.SUMMARY, icon: Icons.PieChart, label: t.navSummary },
+    { id: AppView.EVOLUTION, icon: Icons.Up, label: t.navEvolution || 'Evolución' },
   ];
 
   const sidebarContent = (

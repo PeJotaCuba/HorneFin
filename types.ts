@@ -38,7 +38,8 @@ export enum AppView {
   SUMMARY = 'SUMMARY',
   COST_ANALYSIS = 'COST_ANALYSIS',
   SHOPPING = 'SHOPPING',
-  ORDERS = 'ORDERS'
+  ORDERS = 'ORDERS',
+  EVOLUTION = 'EVOLUTION'
 }
 
 export interface Order {
@@ -64,15 +65,20 @@ export interface Debt {
   id: string;
   debtorName: string;
   product: string;
+  recipeId?: string;
   amount: number;
   date: number;
+  isBatch?: boolean;
 }
 
 export interface UnsoldProduct {
   id: string;
   name: string;
+  recipeId?: string;
   quantity: number;
+  totalValue?: number;
   date: number;
+  isBatch?: boolean;
 }
 
 export interface Sale {
@@ -86,4 +92,18 @@ export interface Sale {
   profit: number;
   date: number;
   type: 'ONE_TIME' | 'RECURRING';
+}
+
+export interface HistoryRecord {
+  id: string;
+  date: number;
+  periodLabel: string; // e.g., '2023-10-25', 'Semana 42', 'Octubre 2023'
+  revenue: number;
+  cost: number;
+  profit: number;
+  totalDebts: number;
+  totalUnsoldValue: number;
+  salesCount: number;
+  debtsCount: number;
+  unsoldQty: number;
 }

@@ -6,6 +6,7 @@ import { Pantry } from './components/Pantry';
 import { Summary } from './components/Summary';
 import { Shopping } from './components/Shopping';
 import { Orders } from './components/Orders';
+import { Evolution } from './components/Evolution';
 import { Sidebar } from './components/Sidebar';
 import { Logo } from './components/Logo';
 import { Header } from './components/Header';
@@ -61,6 +62,7 @@ export default function App() {
   const [unsoldProducts, setUnsoldProducts] = useState<any[]>([]);
   const [linkOrdersToSales, setLinkOrdersToSales] = useState(false);
   const [inventoryStock, setInventoryStock] = useState<Record<string, number>>({});
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
 
   // Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -103,6 +105,7 @@ export default function App() {
         if (Array.isArray(parsed.unsoldProducts)) setUnsoldProducts(parsed.unsoldProducts);
         if (parsed.linkOrdersToSales !== undefined) setLinkOrdersToSales(!!parsed.linkOrdersToSales);
         if (parsed.inventoryStock && typeof parsed.inventoryStock === 'object') setInventoryStock(parsed.inventoryStock);
+        if (Array.isArray(parsed.historyRecords)) setHistoryRecords(parsed.historyRecords);
         if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(!!parsed.isSidebarCollapsed);
       } catch (e) {
         console.error("Error loading local data", e);
@@ -126,13 +129,14 @@ export default function App() {
         unsoldProducts,
         linkOrdersToSales,
         inventoryStock,
+        historyRecords,
         isSidebarCollapsed
       };
       localStorage.setItem('hornefin_data', JSON.stringify(data));
     } catch (e) {
       console.error("Error saving to localStorage (quota exceeded?)", e);
     }
-  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, debts, unsoldProducts, linkOrdersToSales, inventoryStock, isSidebarCollapsed]);
+  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, debts, unsoldProducts, linkOrdersToSales, inventoryStock, historyRecords, isSidebarCollapsed]);
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
@@ -648,6 +652,14 @@ export default function App() {
                onUpdateUnsoldProducts={setUnsoldProducts}
                linkOrdersToSales={linkOrdersToSales}
                onUpdateLinkOrdersToSales={setLinkOrdersToSales}
+               onSaveHistory={(record) => setHistoryRecords([record, ...historyRecords])}
+               t={t}
+            />
+          )}
+
+          {currentView === AppView.EVOLUTION && (
+            <Evolution 
+               historyRecords={historyRecords}
                t={t}
             />
           )}

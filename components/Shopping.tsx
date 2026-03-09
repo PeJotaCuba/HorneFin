@@ -14,6 +14,7 @@ interface ShoppingProps {
 
 export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], inventoryStock, onUpdateInventoryStock, t }) => {
   const [mode, setMode] = useState<'STOCK' | 'COMPRAS'>('STOCK');
+  const [period, setPeriod] = useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
   
   // Compras Mode State
   const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>(() => {
@@ -75,6 +76,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
   const shoppingList = useMemo(() => {
     const ingredientsNeeded: Record<string, { name: string, quantity: number; unit: string }> = {};
+    const periodMultiplier = period === 'MONTH' ? 30 : period === 'WEEK' ? 7 : 1;
 
     Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
       const recipe = recipes.find(r => r.id === recipeId);
@@ -82,7 +84,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
       recipe.ingredients.forEach(ing => {
         const key = normalizeKey(ing.name);
-        const totalNeeded = ing.quantity * count;
+        const totalNeeded = ing.quantity * count * periodMultiplier;
 
         if (ingredientsNeeded[key]) {
           ingredientsNeeded[key].quantity += totalNeeded;
@@ -109,7 +111,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
         unit: needed.unit
       };
     }).filter(item => item.toBuy > 0);
-  }, [recipes, selectedRecipes, inventoryStock]);
+  }, [recipes, selectedRecipes, inventoryStock, period]);
 
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
@@ -170,7 +172,14 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
         ) : (
           <div className="space-y-6 animate-in fade-in">
             <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-              <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">Producción Deseada</label>
+              <div className="flex justify-between items-center mb-4">
+                  <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">Producción Deseada</label>
+                  <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-lg">
+                      <button onClick={() => setPeriod('DAY')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'DAY' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Día</button>
+                      <button onClick={() => setPeriod('WEEK')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'WEEK' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Semana</button>
+                      <button onClick={() => setPeriod('MONTH')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'MONTH' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Mes</button>
+                  </div>
+              </div>
               
               <div className="flex gap-2 mb-4">
                 <select 
