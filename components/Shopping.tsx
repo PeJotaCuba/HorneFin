@@ -1,36 +1,43 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
 import { Recipe, PantryItem, Order } from '../types';
-import { calculateIngredientCost, normalizeKey, convertUnit } from '../utils/units';
+import { normalizeKey } from '../utils/units';
 
 interface ShoppingProps {
   recipes: Recipe[];
   pantry: Record<string, PantryItem>;
-  orders?: Order[]; // Added orders prop
+  orders?: Order[];
+  inventoryStock: Record<string, number>;
+  onUpdateInventoryStock: (stock: Record<string, number>) => void;
   t: any;
 }
 
-export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], t }) => {
-  const [mode, setMode] = useState<'MANUAL' | 'ORDERS'>('MANUAL');
+export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], inventoryStock, onUpdateInventoryStock, t }) => {
+  const [mode, setMode] = useState<'STOCK' | 'COMPRAS'>('STOCK');
   
-  // Manual Mode State
-  const [selectedPeriod, setSelectedPeriod] = useState<'day' | 'week' | 'month'>('day');
+  // Compras Mode State
   const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('shopping_selected_recipes');
     return saved ? JSON.parse(saved) : {};
   });
-  
+  const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
+
   useEffect(() => {
     localStorage.setItem('shopping_selected_recipes', JSON.stringify(selectedRecipes));
   }, [selectedRecipes]);
 
-  // Orders Mode State
-  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
-
-  const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
-  const [showAllIngredients, setShowAllIngredients] = useState(true);
-  const [localPantryOverrides, setLocalPantryOverrides] = useState<Record<string, number>>({});
+  const allIngredients = useMemo(() => {
+    const ingredientsMap: Record<string, { name: string, unit: string }> = {};
+    recipes.forEach(recipe => {
+      recipe.ingredients.forEach(ing => {
+        const key = normalizeKey(ing.name);
+        if (!ingredientsMap[key]) {
+          ingredientsMap[key] = { name: ing.name, unit: ing.unit };
+        }
+      });
+    });
+    return Object.values(ingredientsMap).sort((a, b) => a.name.localeCompare(b.name));
+  }, [recipes]);
 
   const addRecipe = () => {
     if (selectedRecipeToAdd && !selectedRecipes[selectedRecipeToAdd]) {
@@ -55,426 +62,204 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
     });
   };
 
-  const shoppingList = useMemo(() => {
-    const ingredientsNeeded: Record<string, { quantity: number; unit: string }> = {};
-
-    if (mode === 'MANUAL') {
-        const periodMultiplier = selectedPeriod === 'week' ? 6 : selectedPeriod === 'month' ? 24 : 1;
-
-        Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
-        const recipe = recipes.find(r => r.id === recipeId);
-        if (!recipe) return;
-
-        recipe.ingredients.forEach(ing => {
-            const key = normalizeKey(ing.name);
-            const totalNeeded = ing.quantity * count * periodMultiplier;
-
-            if (ingredientsNeeded[key]) {
-            ingredientsNeeded[key].quantity += totalNeeded;
-            } else {
-            ingredientsNeeded[key] = {
-                quantity: totalNeeded,
-                unit: ing.unit
-            };
-            }
-        });
-        });
+  const handleStockChange = (key: string, value: string) => {
+    const numValue = parseFloat(value);
+    const newStock = { ...inventoryStock };
+    if (isNaN(numValue) || numValue === 0) {
+      delete newStock[key];
     } else {
-        // ORDERS MODE
-        const start = new Date(startDate).getTime();
-        const end = new Date(endDate).getTime() + 86400000; // End of day
-
-        // Iterate through each day in range to check recurring orders
-        const dayMap: Record<string, number> = {}; // recipeId -> totalQuantity
-
-        // 1. One-time orders in range
-        orders.filter(o => !o.isRecurring && o.recipeId && o.deliveryDate >= start && o.deliveryDate < end && o.status !== 'CANCELLED')
-              .forEach(o => {
-                  dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
-              });
-
-        // 2. Recurring orders
-        const recurringOrders = orders.filter(o => o.isRecurring && o.recipeId && o.status !== 'CANCELLED');
-        
-        if (recurringOrders.length > 0) {
-            let current = new Date(start);
-            while (current.getTime() < end) {
-                const dayOfWeek = current.getDay(); // 0-6
-                recurringOrders.forEach(o => {
-                    if (o.recurringDays?.includes(dayOfWeek)) {
-                        dayMap[o.recipeId!] = (dayMap[o.recipeId!] || 0) + o.quantity;
-                    }
-                });
-                current.setDate(current.getDate() + 1);
-            }
-        }
-
-        // Calculate ingredients based on dayMap
-        Object.entries(dayMap).forEach(([recipeId, count]) => {
-            const recipe = recipes.find(r => r.id === recipeId);
-            if (!recipe) return;
-
-            recipe.ingredients.forEach(ing => {
-                const key = normalizeKey(ing.name);
-                const totalNeeded = ing.quantity * count;
-
-                if (ingredientsNeeded[key]) {
-                    ingredientsNeeded[key].quantity += totalNeeded;
-                } else {
-                    ingredientsNeeded[key] = {
-                        quantity: totalNeeded,
-                        unit: ing.unit
-                    };
-                }
-            });
-        });
+      newStock[key] = numValue;
     }
+    onUpdateInventoryStock(newStock);
+  };
 
-    // Compare with pantry
-    return Object.entries(ingredientsNeeded).map(([name, needed]) => {
-      const key = normalizeKey(name);
-      const pantryItem = pantry[key];
-      let pantryQty = 0;
-      
-      // Check for local override first
-      if (localPantryOverrides[key] !== undefined) {
-          pantryQty = localPantryOverrides[key];
-      } else if (pantryItem) {
-        if (pantryItem.unit !== needed.unit) {
-             const converted = convertUnit(pantryItem.quantity, pantryItem.unit, needed.unit);
-             if (converted !== null) pantryQty = converted;
+  const shoppingList = useMemo(() => {
+    const ingredientsNeeded: Record<string, { name: string, quantity: number; unit: string }> = {};
+
+    Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (!recipe) return;
+
+      recipe.ingredients.forEach(ing => {
+        const key = normalizeKey(ing.name);
+        const totalNeeded = ing.quantity * count;
+
+        if (ingredientsNeeded[key]) {
+          ingredientsNeeded[key].quantity += totalNeeded;
         } else {
-            pantryQty = pantryItem.quantity;
+          ingredientsNeeded[key] = {
+            name: ing.name,
+            quantity: totalNeeded,
+            unit: ing.unit
+          };
         }
-      }
+      });
+    });
 
-      const toBuy = Math.max(0, needed.quantity - pantryQty);
+    return Object.entries(ingredientsNeeded).map(([key, needed]) => {
+      const currentStock = inventoryStock[key] || 0;
+      const toBuy = Math.max(0, needed.quantity - currentStock);
       
-      // Calculate estimated cost
-      let unitPrice = 0;
-      if (pantryItem) {
-          // Normalize price to base unit if possible, or just use pantry price/qty
-          // Price per unit of the pantry item
-          unitPrice = pantryItem.price / pantryItem.quantity; 
-          // But wait, pantryItem.price is usually total price for the quantity? 
-          // Or price per unit? Types say "price: number". Usually price per package or unit.
-          // Let's assume price is for the quantity in pantry? No, usually price per unit.
-          // Let's look at how it's used elsewhere. 
-          // In CostAnalysis, we calculate cost.
-          // Let's assume we need to normalize.
-          // Actually, let's use calculateIngredientCost logic but for the 'toBuy' amount.
-      }
-      
-      // Better approach: Use calculateIngredientCost utility
-      let estimatedCost = 0;
-      if (toBuy > 0) {
-          if (pantryItem) {
-               estimatedCost = calculateIngredientCost(toBuy, needed.unit, pantryItem.price, pantryItem.quantity, pantryItem.unit);
-          } else {
-              // Try to find ingredient in recipes to get purchase price
-              // This is expensive to search every time.
-              // Let's just use 0 if not in pantry for now, or try to find one instance.
-              const recipeWithIng = recipes.find(r => r.ingredients.some(i => normalizeKey(i.name) === key));
-              const ing = recipeWithIng?.ingredients.find(i => normalizeKey(i.name) === key);
-              if (ing && ing.purchasePrice && ing.purchaseUnitQuantity) {
-                  estimatedCost = calculateIngredientCost(toBuy, needed.unit, ing.purchasePrice, ing.purchaseUnitQuantity, ing.unit);
-              }
-          }
-      }
-
       return {
-        name,
+        key,
+        name: needed.name,
         needed: needed.quantity,
-        inPantry: pantryQty,
+        inStock: currentStock,
         toBuy,
-        unit: needed.unit,
-        estimatedCost
+        unit: needed.unit
       };
-    }).filter(item => showAllIngredients || item.toBuy > 0);
-  }, [recipes, selectedRecipes, selectedPeriod, pantry, mode, orders, startDate, endDate, showAllIngredients, localPantryOverrides]);
-
-  const handleExport = () => {
-    const title = mode === 'MANUAL' 
-        ? `Lista de Compras (${t[selectedPeriod]})`
-        : `Lista de Compras (${startDate} - ${endDate})`;
-
-    const content = `
-      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-      <head><meta charset='utf-8'><title>${title}</title>
-      <style>
-        body { font-family: 'Arial', sans-serif; }
-        ul { list-style-type: none; padding: 0; }
-        li { padding: 8px 0; border-bottom: 1px solid #eee; }
-        .header { margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-      </style>
-      </head><body>
-      <div class="header">
-        <h1>${title}</h1>
-        ${mode === 'MANUAL' ? `
-        <p><strong>Recetas seleccionadas:</strong></p>
-        <ul>
-          ${Object.entries(selectedRecipes).map(([id, count]) => {
-             const r = recipes.find(rec => rec.id === id);
-             return r ? `<li>${count}x ${r.name}</li>` : '';
-          }).join('')}
-        </ul>
-        ` : ''}
-      </div>
-      <h2>Ingredientes a Comprar</h2>
-      <ul>
-        ${shoppingList.map(item => `
-          <li>
-            <strong>${item.name}</strong>: ${item.toBuy.toFixed(2)} ${item.unit}
-            <br/><span style="font-size: 12px; color: #666;">(Necesario: ${item.needed.toFixed(2)} - En Despensa: ${item.inPantry.toFixed(2)})</span>
-          </li>
-        `).join('')}
-      </ul>
-      </body></html>
-    `;
-
-    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Compras_${new Date().toISOString().slice(0, 10)}.doc`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const handleWhatsApp = () => {
-    const text = `*Lista de Compras*\n\n` + shoppingList.map(item => 
-      `- ${item.name}: ${item.toBuy.toFixed(2)} ${item.unit}`
-    ).join('\n');
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-  };
+    }).filter(item => item.toBuy > 0);
+  }, [recipes, selectedRecipes, inventoryStock]);
 
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-emerald-600 text-white p-1.5 rounded-lg"><Icons.Package size={24} /></span>
-          {t.navShopping}
+          Inventario
         </h1>
         
         {/* Mode Toggle */}
         <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl mt-4">
             <button 
-                onClick={() => setMode('MANUAL')}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'MANUAL' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+                onClick={() => setMode('STOCK')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'STOCK' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                {t.modeManual}
+                Stock
             </button>
             <button 
-                onClick={() => setMode('ORDERS')}
-                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'ORDERS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+                onClick={() => setMode('COMPRAS')}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'COMPRAS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                {t.modeOrders}
+                Compras
             </button>
         </div>
       </div>
 
       <div className="p-4 space-y-6">
-        
-        {/* Configuration Section */}
-        <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-          
-          {mode === 'MANUAL' ? (
-              <>
-                <div className="mb-6">
-                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectPeriod}</label>
-                    <div className="flex gap-2">
-                    {(['day', 'week', 'month'] as const).map(p => (
-                        <button
-                        key={p}
-                        onClick={() => setSelectedPeriod(p)}
-                        className={`flex-1 py-2 rounded-xl text-sm font-bold border-2 transition-all ${
-                            selectedPeriod === p 
-                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400' 
-                            : 'border-transparent bg-stone-100 dark:bg-stone-800 text-stone-500'
-                        }`}
-                        >
-                        {t[p]}
-                        </button>
-                    ))}
-                    </div>
-                </div>
-
-                <div>
-                    <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">{t.selectRecipes}</label>
-                    
-                    <div className="flex gap-2 mb-3">
-                      <select 
-                        className="flex-1 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
-                        value={selectedRecipeToAdd}
-                        onChange={e => setSelectedRecipeToAdd(e.target.value)}
-                      >
-                        <option value="">{t.select}</option>
-                        {recipes.map(r => (
-                          <option key={r.id} value={r.id}>{r.name}</option>
-                        ))}
-                      </select>
-                      <button 
-                        onClick={addRecipe}
-                        disabled={!selectedRecipeToAdd}
-                        className="px-4 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50"
-                      >
-                        {t.add}
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    {Object.entries(selectedRecipes).map(([recipeId, count]) => {
-                        const recipe = recipes.find(r => r.id === recipeId);
-                        if (!recipe) return null;
-                        return (
-                          <div 
-                          key={recipe.id}
-                          className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center"
-                          >
-                          <span className="font-medium text-stone-700 dark:text-stone-300">
-                              {recipe.name}
-                          </span>
-                          
-                          <div className="flex items-center gap-3">
-                              <button 
-                                  onClick={() => updateQuantity(recipe.id, -1)}
-                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
-                              >-</button>
-                              <span className="font-bold text-sm w-4 text-center dark:text-white">{count}</span>
-                              <button 
-                                  onClick={() => updateQuantity(recipe.id, 1)}
-                                  className="w-6 h-6 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
-                              >+</button>
-                              <button 
-                                  onClick={() => removeRecipe(recipe.id)}
-                                  className="ml-2 text-red-400 hover:text-red-500"
-                              >
-                                <Icons.Close size={16} />
-                              </button>
-                          </div>
-                          </div>
-                        );
-                    })}
-                    {Object.keys(selectedRecipes).length === 0 && (
-                      <p className="text-center text-stone-400 text-sm py-4">{t.noRecipes}</p>
-                    )}
-                    </div>
-                </div>
-              </>
-          ) : (
-              // ORDERS MODE CONFIG
-              <div className="animate-in fade-in">
-                  <div className="flex gap-4 mb-4">
-                    <div className="flex-1">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.startDate}</label>
-                        <input 
-                            type="date" 
-                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
-                            value={startDate}
-                            onChange={e => setStartDate(e.target.value)}
-                        />
-                    </div>
-                    <div className="flex-1">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.endDate}</label>
-                        <input 
-                            type="date" 
-                            className="w-full p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
-                            value={endDate}
-                            onChange={e => setEndDate(e.target.value)}
-                        />
+        {mode === 'STOCK' ? (
+          <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in fade-in">
+            <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4">Stock Actual</h2>
+            <p className="text-sm text-stone-500 mb-6">Introduce la cantidad disponible de cada insumo. Los campos vacíos se consideran como 0.</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {allIngredients.map(ing => {
+                const key = normalizeKey(ing.name);
+                const stockValue = inventoryStock[key] || 0;
+                return (
+                  <div key={key} className="flex items-center justify-between p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700">
+                    <span className="font-medium text-stone-700 dark:text-stone-300 capitalize truncate pr-2">{ing.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <input 
+                        type="number" 
+                        placeholder="0"
+                        className="w-20 p-2 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-600 rounded-lg text-sm dark:text-white focus:border-emerald-500 focus:outline-none placeholder-stone-400"
+                        value={stockValue === 0 ? '' : stockValue}
+                        onChange={(e) => handleStockChange(key, e.target.value)}
+                      />
+                      <span className="text-xs text-stone-500 w-8">{ing.unit}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-stone-500 italic">
-                      Se calcularán los ingredientes necesarios para todos los pedidos (incluyendo recurrentes) dentro de este rango de fechas.
-                  </p>
-              </div>
-          )}
-        </div>
-
-        {/* Results */}
-        {shoppingList.length > 0 ? (
-          <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in slide-in-from-bottom-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-stone-900 dark:text-white text-lg">{t.shoppingList}</h2>
-              <div className="flex gap-2 items-center">
-                <button 
-                  onClick={() => setShowAllIngredients(!showAllIngredients)}
-                  className={`p-2 rounded-xl transition ${showAllIngredients ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}
-                  title="Mostrar todos los ingredientes"
-                >
-                  <Icons.Layers size={20} />
-                </button>
-                <button onClick={handleWhatsApp} className="p-2 bg-green-100 text-green-700 rounded-xl hover:bg-green-200 transition">
-                  <Icons.Share size={20} />
-                </button>
-                <button onClick={handleExport} className="p-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition">
-                  <Icons.Download size={20} />
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {shoppingList.map((item, idx) => (
-                <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl gap-3">
-                  <div className="flex-1">
-                    <p className="font-bold text-stone-800 dark:text-white capitalize">{item.name}</p>
-                    <p className="text-xs text-stone-500">
-                      {t.needed}: {item.needed.toFixed(1)} {item.unit}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end">
-                    <div className="flex flex-col items-end">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase">{t.inPantry}</label>
-                        <div className="flex items-center gap-1">
-                            <input 
-                                type="number" 
-                                className="w-20 p-1 text-right bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg text-sm dark:text-white"
-                                value={item.inPantry}
-                                onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    if (!isNaN(val)) {
-                                        setLocalPantryOverrides(prev => ({
-                                            ...prev,
-                                            [normalizeKey(item.name)]: val
-                                        }));
-                                    }
-                                }}
-                            />
-                            <span className="text-xs text-stone-500">{item.unit}</span>
-                        </div>
-                    </div>
-
-                    <div className="text-right min-w-[80px]">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase block">A Comprar</label>
-                        <span className="block text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                        {item.toBuy.toFixed(1)} <span className="text-xs text-stone-400">{item.unit}</span>
-                        </span>
-                        {item.estimatedCost > 0 && (
-                            <span className="block text-xs font-bold text-stone-500 dark:text-stone-400">
-                                ${item.estimatedCost.toFixed(2)}
-                            </span>
-                        )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-stone-100 dark:border-stone-800 flex justify-end">
-                <div className="text-right">
-                    <p className="text-xs font-bold text-stone-400 uppercase">Costo Estimado Total</p>
-                    <p className="text-2xl font-bold text-stone-900 dark:text-white">
-                        ${shoppingList.reduce((sum, item) => sum + (item.estimatedCost || 0), 0).toFixed(2)}
-                    </p>
-                </div>
+                );
+              })}
+              {allIngredients.length === 0 && (
+                <p className="text-stone-400 text-sm col-span-full text-center py-4">No hay insumos registrados en las recetas.</p>
+              )}
             </div>
           </div>
         ) : (
-          <div className="text-center py-10 opacity-50">
-            <Icons.Package size={48} className="mx-auto mb-2 text-stone-300" />
-            <p className="text-stone-400 font-medium">{t.noItemsToBuy}</p>
+          <div className="space-y-6 animate-in fade-in">
+            <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+              <label className="text-xs font-bold text-stone-400 uppercase mb-2 block tracking-wider">Producción Deseada</label>
+              
+              <div className="flex gap-2 mb-4">
+                <select 
+                  className="flex-1 p-3 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white"
+                  value={selectedRecipeToAdd}
+                  onChange={e => setSelectedRecipeToAdd(e.target.value)}
+                >
+                  <option value="">Seleccionar receta...</option>
+                  {recipes.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+                <button 
+                  onClick={addRecipe}
+                  disabled={!selectedRecipeToAdd}
+                  className="px-4 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50"
+                >
+                  Añadir
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+              {Object.entries(selectedRecipes).map(([recipeId, count]) => {
+                  const recipe = recipes.find(r => r.id === recipeId);
+                  if (!recipe) return null;
+                  return (
+                    <div 
+                    key={recipe.id}
+                    className="p-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center"
+                    >
+                    <span className="font-medium text-stone-700 dark:text-stone-300">
+                        {recipe.name}
+                    </span>
+                    
+                    <div className="flex items-center gap-3">
+                        <button 
+                            onClick={() => updateQuantity(recipe.id, -1)}
+                            className="w-8 h-8 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                        >-</button>
+                        <span className="font-bold text-sm w-6 text-center dark:text-white">{count}</span>
+                        <button 
+                            onClick={() => updateQuantity(recipe.id, 1)}
+                            className="w-8 h-8 flex items-center justify-center bg-white dark:bg-stone-700 rounded-full shadow-sm text-stone-600"
+                        >+</button>
+                        <button 
+                            onClick={() => removeRecipe(recipe.id)}
+                            className="ml-2 text-red-400 hover:text-red-500"
+                        >
+                          <Icons.Close size={18} />
+                        </button>
+                    </div>
+                    </div>
+                  );
+              })}
+              {Object.keys(selectedRecipes).length === 0 && (
+                <p className="text-center text-stone-400 text-sm py-4">Añade recetas para calcular las necesidades de compra.</p>
+              )}
+              </div>
+            </div>
+
+            {shoppingList.length > 0 ? (
+              <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
+                <h2 className="font-bold text-stone-900 dark:text-white text-lg mb-4">Lista de Compras</h2>
+                <div className="space-y-3">
+                  {shoppingList.map((item, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl gap-3 border border-emerald-100 dark:border-emerald-900/30">
+                      <div className="flex-1">
+                        <p className="font-bold text-stone-800 dark:text-white capitalize">{item.name}</p>
+                        <p className="text-xs text-stone-500 mt-1">
+                          Necesario: {item.needed.toFixed(1)} {item.unit} | Stock: {item.inStock.toFixed(1)} {item.unit}
+                        </p>
+                      </div>
+                      
+                      <div className="text-right bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg">
+                          <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase block">Pendiente de compra</label>
+                          <span className="block text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                          {item.toBuy.toFixed(1)} <span className="text-xs">{item.unit}</span>
+                          </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-10 opacity-50">
+                <Icons.Package size={48} className="mx-auto mb-2 text-stone-300" />
+                <p className="text-stone-400 font-medium">No hay insumos pendientes de compra.</p>
+              </div>
+            )}
           </div>
         )}
       </div>

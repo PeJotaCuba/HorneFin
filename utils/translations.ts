@@ -178,11 +178,11 @@ export const TRANSLATIONS = {
     navHome: "Inicio",
     navCosts: "Costos",
     navSummary: "Finanzas Globales",
-    navShopping: "Compras",
+    navShopping: "Inventario",
     navHomeInfo: "Gestión de Recetas",
     navCostsInfo: "Precios de Insumos",
     navSummaryInfo: "Estadísticas Globales",
-    navShoppingInfo: "Generar Lista de Compras",
+    navShoppingInfo: "Gestión de Stock y Compras",
     
     // Actions
     downloadBackup: "Descargar Base de Datos",
@@ -369,11 +369,11 @@ export const TRANSLATIONS = {
     navHome: "Home",
     navCosts: "Costs",
     navSummary: "Global Finances",
-    navShopping: "Shopping",
+    navShopping: "Inventory",
     navHomeInfo: "Recipe Management",
     navCostsInfo: "Ingredient Prices",
     navSummaryInfo: "Global Stats",
-    navShoppingInfo: "Generate Shopping List",
+    navShoppingInfo: "Stock & Shopping",
 
     // Actions
     downloadBackup: "Download Database",
@@ -560,11 +560,11 @@ export const TRANSLATIONS = {
     navHome: "Início",
     navCosts: "Custos",
     navSummary: "Finanças Globais",
-    navShopping: "Compras",
+    navShopping: "Inventário",
     navHomeInfo: "Gestão de Receitas",
     navCostsInfo: "Preços de Insumos",
     navSummaryInfo: "Estatísticas Globais",
-    navShoppingInfo: "Gerar Lista de Compras",
+    navShoppingInfo: "Gestão de Estoque e Compras",
 
     // Actions
     downloadBackup: "Baixar Banco de Dados",

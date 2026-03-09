@@ -60,6 +60,21 @@ export interface Order {
   lastDeliveryDate?: number; // timestamp of last confirmed delivery (for recurring)
 }
 
+export interface Debt {
+  id: string;
+  debtorName: string;
+  product: string;
+  amount: number;
+  date: number;
+}
+
+export interface UnsoldProduct {
+  id: string;
+  name: string;
+  quantity: number;
+  date: number;
+}
+
 export interface Sale {
   id: string;
   orderId?: string;

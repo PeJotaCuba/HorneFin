@@ -57,6 +57,10 @@ export default function App() {
   const [baseRecipes, setBaseRecipes] = useState<any[]>(PRESET_RECIPES);
   const [orders, setOrders] = useState<Order[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [debts, setDebts] = useState<any[]>([]);
+  const [unsoldProducts, setUnsoldProducts] = useState<any[]>([]);
+  const [linkOrdersToSales, setLinkOrdersToSales] = useState(false);
+  const [inventoryStock, setInventoryStock] = useState<Record<string, number>>({});
 
   // Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -95,6 +99,10 @@ export default function App() {
 
         if (Array.isArray(parsed.orders)) setOrders(parsed.orders);
         if (Array.isArray(parsed.sales)) setSales(parsed.sales);
+        if (Array.isArray(parsed.debts)) setDebts(parsed.debts);
+        if (Array.isArray(parsed.unsoldProducts)) setUnsoldProducts(parsed.unsoldProducts);
+        if (parsed.linkOrdersToSales !== undefined) setLinkOrdersToSales(!!parsed.linkOrdersToSales);
+        if (parsed.inventoryStock && typeof parsed.inventoryStock === 'object') setInventoryStock(parsed.inventoryStock);
         if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(!!parsed.isSidebarCollapsed);
       } catch (e) {
         console.error("Error loading local data", e);
@@ -114,13 +122,17 @@ export default function App() {
         language,
         orders,
         sales,
+        debts,
+        unsoldProducts,
+        linkOrdersToSales,
+        inventoryStock,
         isSidebarCollapsed
       };
       localStorage.setItem('hornefin_data', JSON.stringify(data));
     } catch (e) {
       console.error("Error saving to localStorage (quota exceeded?)", e);
     }
-  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, isSidebarCollapsed]);
+  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, debts, unsoldProducts, linkOrdersToSales, inventoryStock, isSidebarCollapsed]);
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
@@ -491,6 +503,10 @@ export default function App() {
       language,
       orders,
       sales,
+      debts,
+      unsoldProducts,
+      linkOrdersToSales,
+      inventoryStock,
       isSidebarCollapsed
     };
     
@@ -509,6 +525,10 @@ export default function App() {
       if (data.pantry) setPantry(data.pantry);
       if (data.orders) setOrders(data.orders);
       if (data.sales) setSales(data.sales);
+      if (data.debts) setDebts(data.debts);
+      if (data.unsoldProducts) setUnsoldProducts(data.unsoldProducts);
+      if (data.linkOrdersToSales !== undefined) setLinkOrdersToSales(data.linkOrdersToSales);
+      if (data.inventoryStock) setInventoryStock(data.inventoryStock);
       if (data.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(data.isSidebarCollapsed);
   };
 
@@ -622,6 +642,12 @@ export default function App() {
                pantry={pantry} 
                orders={orders}
                sales={sales}
+               debts={debts}
+               onUpdateDebts={setDebts}
+               unsoldProducts={unsoldProducts}
+               onUpdateUnsoldProducts={setUnsoldProducts}
+               linkOrdersToSales={linkOrdersToSales}
+               onUpdateLinkOrdersToSales={setLinkOrdersToSales}
                t={t}
             />
           )}
@@ -631,6 +657,8 @@ export default function App() {
                recipes={recipes} 
                pantry={pantry}
                orders={orders}
+               inventoryStock={inventoryStock}
+               onUpdateInventoryStock={setInventoryStock}
                t={t} 
             />
           )}
