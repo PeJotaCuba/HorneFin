@@ -64,41 +64,58 @@ export const Summary: React.FC<SummaryProps> = ({
   const [newUnsoldRecipeId, setNewUnsoldRecipeId] = useState('');
   const [newUnsoldQty, setNewUnsoldQty] = useState('');
   const [newUnsoldUnitPrice, setNewUnsoldUnitPrice] = useState('');
+  const [newUnsoldAmount, setNewUnsoldAmount] = useState('');
   const [newUnsoldIsBatch, setNewUnsoldIsBatch] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('summary_selected_recipes', JSON.stringify(selectedRecipes));
   }, [selectedRecipes]);
 
+  const getRecipeSuggestedPrice = (recipe: Recipe) => {
+    const totalCost = calculateRecipeCost(recipe);
+    const costPerItem = recipe.mode === 'BATCH' ? (totalCost / (recipe.batchSize || 1)) : totalCost;
+    const margin = recipe.profitMargin || 25;
+    return margin < 100 ? costPerItem / (1 - (margin / 100)) : costPerItem;
+  };
+
   // Auto-calculate debt/unsold amount when recipe, batch mode, or qty changes
   useEffect(() => {
     if (newDebtRecipeId) {
       const recipe = recipes.find(r => r.id === newDebtRecipeId);
       if (recipe) {
-        const price = recipe.suggestedPrice || 0;
+        const price = getRecipeSuggestedPrice(recipe);
         const unitPrice = newDebtIsBatch ? price * (recipe.batchSize || 1) : price;
         setNewDebtUnitPrice(unitPrice.toFixed(2));
-        const qty = parseFloat(newDebtQty) || 0;
-        setNewDebtAmount((unitPrice * qty).toFixed(2));
       }
     } else {
       setNewDebtUnitPrice('');
-      setNewDebtAmount('');
     }
-  }, [newDebtRecipeId, newDebtIsBatch, newDebtQty, recipes]);
+  }, [newDebtRecipeId, newDebtIsBatch, recipes, pantry]);
+
+  useEffect(() => {
+    const unitPrice = parseFloat(newDebtUnitPrice) || 0;
+    const qty = parseFloat(newDebtQty) || 0;
+    setNewDebtAmount((unitPrice * qty).toFixed(2));
+  }, [newDebtUnitPrice, newDebtQty]);
 
   useEffect(() => {
     if (newUnsoldRecipeId) {
       const recipe = recipes.find(r => r.id === newUnsoldRecipeId);
       if (recipe) {
-        const price = recipe.suggestedPrice || 0;
+        const price = getRecipeSuggestedPrice(recipe);
         const unitPrice = newUnsoldIsBatch ? price * (recipe.batchSize || 1) : price;
         setNewUnsoldUnitPrice(unitPrice.toFixed(2));
       }
     } else {
       setNewUnsoldUnitPrice('');
     }
-  }, [newUnsoldRecipeId, newUnsoldIsBatch, recipes]);
+  }, [newUnsoldRecipeId, newUnsoldIsBatch, recipes, pantry]);
+
+  useEffect(() => {
+    const unitPrice = parseFloat(newUnsoldUnitPrice) || 0;
+    const qty = parseFloat(newUnsoldQty) || 0;
+    setNewUnsoldAmount((unitPrice * qty).toFixed(2));
+  }, [newUnsoldUnitPrice, newUnsoldQty]);
 
   const calculateRecipeCost = (recipe: Recipe) => {
     return recipe.ingredients.reduce((sum, ing) => {
@@ -170,7 +187,7 @@ export const Summary: React.FC<SummaryProps> = ({
       const recipe = recipes.find(r => r.id === newUnsoldRecipeId);
       const unitPrice = parseFloat(newUnsoldUnitPrice) || 0;
       const qty = parseInt(newUnsoldQty, 10) || 0;
-      const amount = unitPrice * qty;
+      const amount = parseFloat(newUnsoldAmount) || (unitPrice * qty);
 
       const prod: UnsoldProduct = {
         id: Date.now().toString(),
@@ -186,6 +203,7 @@ export const Summary: React.FC<SummaryProps> = ({
       setNewUnsoldRecipeId('');
       setNewUnsoldQty('');
       setNewUnsoldUnitPrice('');
+      setNewUnsoldAmount('');
       setNewUnsoldIsBatch(false);
     }
   };
@@ -582,29 +600,36 @@ export const Summary: React.FC<SummaryProps> = ({
                    </label>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <input 
                   type="number" 
                   placeholder={t.qty || "Cant."} 
-                  className="w-16 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newUnsoldQty}
                   onChange={e => setNewUnsoldQty(e.target.value)}
                 />
                 <input 
                   type="number" 
                   placeholder={t.unitPrice || "Precio U."} 
-                  className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newUnsoldUnitPrice}
                   onChange={e => setNewUnsoldUnitPrice(e.target.value)}
                 />
-                <button 
-                  onClick={addUnsoldProduct}
-                  disabled={!newUnsoldRecipeId || !newUnsoldQty}
-                  className="px-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 text-sm flex items-center justify-center"
-                >
-                  <Icons.Plus size={16} />
-                </button>
+                <input 
+                  type="number" 
+                  placeholder={t.amount || "Monto"} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newUnsoldAmount}
+                  onChange={e => setNewUnsoldAmount(e.target.value)}
+                />
               </div>
+              <button 
+                onClick={addUnsoldProduct}
+                disabled={!newUnsoldRecipeId || !newUnsoldQty}
+                className="w-full py-2 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 text-sm flex items-center justify-center gap-2"
+              >
+                <Icons.Plus size={16} /> {t.add || 'Añadir'}
+              </button>
             </div>
 
             <div className="space-y-2 flex-1 overflow-y-auto max-h-48">
@@ -663,7 +688,10 @@ export const Summary: React.FC<SummaryProps> = ({
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
                 <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-1">{t.pendingSales || 'Pendientes Venta'}</p>
-                <p className="text-xl font-bold text-amber-700 dark:text-amber-300">{financials.totalUnsold} {t.units || 'unid.'}</p>
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-300">
+                  {financials.totalUnsold} {t.units || 'unid.'} 
+                  <span className="block text-sm font-medium opacity-80">${financials.totalUnsoldValue.toFixed(2)}</span>
+                </p>
               </div>
             </div>
 
