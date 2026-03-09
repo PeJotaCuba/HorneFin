@@ -126,7 +126,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         setInputText('');
       }
     } catch (e) {
-      alert("Error al analizar el texto. Intenta usar un formato más claro o ingresa manualmente.");
+      alert(t.errorParsing);
       console.error(e);
     } finally {
       setIsParsing(false);
@@ -236,7 +236,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       notes: preset.notes
     };
     onAddRecipe(newRecipe);
-    alert(`${t.appTitle}: ${t.presets} añadida`);
+    alert(t.presetAdded);
   };
 
   return (
@@ -381,13 +381,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                                 <Icons.Copy size={12} className="text-purple-500"/> {t.duplicate}
                             </div>
                             <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 1); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                Similar
+                                {t.similar}
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 2); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                Doble
+                                {t.double}
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); onDuplicateRecipe?.(recipe, 0.5); setActiveMenuId(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3 pl-8">
-                                Mitad
+                                {t.half}
                             </button>
                             <div className="h-px bg-stone-100 dark:bg-stone-800 my-1"></div>
                             <button onClick={(e) => { e.stopPropagation(); onAddToBase?.(recipe); setActiveMenuId(null); }} className="w-full text-left px-4 py-3 text-xs font-bold text-stone-600 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 flex items-center gap-3">
@@ -425,7 +425,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                  <h3 className="font-bold text-stone-900 dark:text-white leading-tight">{t.notes}:<br/><span className="text-amber-600 text-sm">{showNotesModal.name}</span></h3>
               </div>
               <div className="max-h-[60vh] overflow-y-auto pr-2">
-                <p className="text-sm text-stone-600 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">{showNotesModal.notes || "No hay notas de elaboración guardadas para esta receta."}</p>
+                <p className="text-sm text-stone-600 dark:text-stone-300 whitespace-pre-wrap leading-relaxed">{showNotesModal.notes || t.noNotes}</p>
               </div>
            </div>
         </div>

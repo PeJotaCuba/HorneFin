@@ -22,6 +22,11 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
     return saved ? JSON.parse(saved) : {};
   });
   const [selectedRecipeToAdd, setSelectedRecipeToAdd] = useState('');
+  
+  // Purchase Management State
+  const [purchasedItems, setPurchasedItems] = useState<Set<string>>(new Set());
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [purchaseQuantities, setPurchaseQuantities] = useState<Record<string, number>>({});
 
   useEffect(() => {
     localStorage.setItem('shopping_selected_recipes', JSON.stringify(selectedRecipes));
@@ -113,12 +118,48 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
     }).filter(item => item.toBuy > 0);
   }, [recipes, selectedRecipes, inventoryStock, period]);
 
+  const handleTogglePurchase = (key: string) => {
+    setPurchasedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(key)) {
+        newSet.delete(key);
+      } else {
+        newSet.add(key);
+      }
+      return newSet;
+    });
+  };
+
+  const openPurchaseModal = () => {
+    const initialQuantities: Record<string, number> = {};
+    shoppingList.forEach(item => {
+      if (purchasedItems.has(item.key)) {
+        initialQuantities[item.key] = item.toBuy;
+      }
+    });
+    setPurchaseQuantities(initialQuantities);
+    setIsPurchaseModalOpen(true);
+  };
+
+  const confirmPurchase = () => {
+    const newStock = { ...inventoryStock };
+    Object.entries(purchaseQuantities).forEach(([key, qty]) => {
+      if (qty > 0) {
+        newStock[key] = (newStock[key] || 0) + qty;
+      }
+    });
+    onUpdateInventoryStock(newStock);
+    setPurchasedItems(new Set());
+    setIsPurchaseModalOpen(false);
+    alert(t.stockUpdated || 'Stock actualizado con las compras confirmadas.');
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-emerald-600 text-white p-1.5 rounded-lg"><Icons.Package size={24} /></span>
-          Inventario
+          {t.navShopping || 'Inventario'}
         </h1>
         
         {/* Mode Toggle */}
@@ -127,13 +168,13 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                 onClick={() => setMode('STOCK')}
                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'STOCK' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                Stock
+                {t.stock || 'Stock'}
             </button>
             <button 
                 onClick={() => setMode('COMPRAS')}
                 className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === 'COMPRAS' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
             >
-                Compras
+                {t.purchases || 'Compras'}
             </button>
         </div>
       </div>
@@ -141,8 +182,8 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
       <div className="p-4 space-y-6">
         {mode === 'STOCK' ? (
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in fade-in">
-            <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4">Stock Actual</h2>
-            <p className="text-sm text-stone-500 mb-6">Introduce la cantidad disponible de cada insumo. Los campos vacíos se consideran como 0.</p>
+            <h2 className="text-lg font-bold text-stone-800 dark:text-white mb-4">{t.currentStock || 'Stock Actual'}</h2>
+            <p className="text-sm text-stone-500 mb-6">{t.stockInfo || 'Introduce la cantidad disponible de cada insumo. Los campos vacíos se consideran como 0.'}</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {allIngredients.map(ing => {
@@ -165,7 +206,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                 );
               })}
               {allIngredients.length === 0 && (
-                <p className="text-stone-400 text-sm col-span-full text-center py-4">No hay insumos registrados en las recetas.</p>
+                <p className="text-stone-400 text-sm col-span-full text-center py-4">{t.noIngredientsRegistered || 'No hay insumos registrados en las recetas.'}</p>
               )}
             </div>
           </div>
@@ -173,11 +214,11 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
           <div className="space-y-6 animate-in fade-in">
             <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
               <div className="flex justify-between items-center mb-4">
-                  <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">Producción Deseada</label>
+                  <label className="text-xs font-bold text-stone-400 uppercase tracking-wider">{t.desiredProduction || 'Producción Deseada'}</label>
                   <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-lg">
-                      <button onClick={() => setPeriod('DAY')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'DAY' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Día</button>
-                      <button onClick={() => setPeriod('WEEK')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'WEEK' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Semana</button>
-                      <button onClick={() => setPeriod('MONTH')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'MONTH' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>Mes</button>
+                      <button onClick={() => setPeriod('DAY')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'DAY' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>{t.day || 'Día'}</button>
+                      <button onClick={() => setPeriod('WEEK')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'WEEK' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>{t.week || 'Semana'}</button>
+                      <button onClick={() => setPeriod('MONTH')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${period === 'MONTH' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}>{t.month || 'Mes'}</button>
                   </div>
               </div>
               
@@ -187,7 +228,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                   value={selectedRecipeToAdd}
                   onChange={e => setSelectedRecipeToAdd(e.target.value)}
                 >
-                  <option value="">Seleccionar receta...</option>
+                  <option value="">{t.selectRecipe || 'Seleccionar receta...'}</option>
                   {recipes.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
@@ -197,7 +238,7 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                   disabled={!selectedRecipeToAdd}
                   className="px-4 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50"
                 >
-                  Añadir
+                  {t.add || 'Añadir'}
                 </button>
               </div>
 
@@ -235,43 +276,122 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
                   );
               })}
               {Object.keys(selectedRecipes).length === 0 && (
-                <p className="text-center text-stone-400 text-sm py-4">Añade recetas para calcular las necesidades de compra.</p>
+                <p className="text-center text-stone-400 text-sm py-4">{t.addRecipesToCalculate || 'Añade recetas para calcular las necesidades de compra.'}</p>
               )}
               </div>
             </div>
 
             {shoppingList.length > 0 ? (
               <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">
-                <h2 className="font-bold text-stone-900 dark:text-white text-lg mb-4">Lista de Compras</h2>
+                <h2 className="font-bold text-stone-900 dark:text-white text-lg mb-4">{t.shoppingList || 'Lista de Compras'}</h2>
                 <div className="space-y-3">
                   {shoppingList.map((item, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-stone-50 dark:bg-stone-800 rounded-xl gap-3 border border-emerald-100 dark:border-emerald-900/30">
-                      <div className="flex-1">
-                        <p className="font-bold text-stone-800 dark:text-white capitalize">{item.name}</p>
-                        <p className="text-xs text-stone-500 mt-1">
-                          Necesario: {item.needed.toFixed(1)} {item.unit} | Stock: {item.inStock.toFixed(1)} {item.unit}
-                        </p>
+                    <div key={idx} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-xl gap-3 border transition-colors ${purchasedItems.has(item.key) ? 'bg-emerald-50 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-800' : 'bg-stone-50 dark:bg-stone-800 border-emerald-100 dark:border-emerald-900/30'}`}>
+                      <div className="flex items-center gap-3 flex-1">
+                        <label className="flex items-center cursor-pointer gap-2">
+                          <input 
+                            type="checkbox" 
+                            className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-stone-300 dark:border-stone-600 bg-white dark:bg-stone-800"
+                            checked={purchasedItems.has(item.key)}
+                            onChange={() => handleTogglePurchase(item.key)}
+                          />
+                          <span className="sr-only">{t.purchased || 'Comprado'}</span>
+                        </label>
+                        <div>
+                          <p className={`font-bold capitalize ${purchasedItems.has(item.key) ? 'text-emerald-800 dark:text-emerald-400 line-through opacity-70' : 'text-stone-800 dark:text-white'}`}>{item.name}</p>
+                          <p className="text-xs text-stone-500 mt-1">
+                            {t.needed || 'Necesario:'} {item.needed.toFixed(1)} {item.unit} | {t.stockLabel || 'Stock:'} {item.inStock.toFixed(1)} {item.unit}
+                          </p>
+                        </div>
                       </div>
                       
-                      <div className="text-right bg-emerald-50 dark:bg-emerald-900/20 px-4 py-2 rounded-lg">
-                          <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase block">Pendiente de compra</label>
-                          <span className="block text-lg font-bold text-emerald-700 dark:text-emerald-300">
+                      <div className={`text-right px-4 py-2 rounded-lg ${purchasedItems.has(item.key) ? 'bg-emerald-100 dark:bg-emerald-900/30' : 'bg-emerald-50 dark:bg-emerald-900/20'}`}>
+                          <label className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase block">{t.pendingPurchase || 'Pendiente de compra'}</label>
+                          <span className={`block text-lg font-bold ${purchasedItems.has(item.key) ? 'text-emerald-800 dark:text-emerald-500' : 'text-emerald-700 dark:text-emerald-300'}`}>
                           {item.toBuy.toFixed(1)} <span className="text-xs">{item.unit}</span>
                           </span>
                       </div>
                     </div>
                   ))}
                 </div>
+                
+                <div className="mt-6 flex justify-end">
+                  <button 
+                    onClick={openPurchaseModal}
+                    disabled={purchasedItems.size === 0}
+                    className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-sm hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Icons.Check size={20} />
+                    {t.updateStock || 'Actualizar Stock'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-center py-10 opacity-50">
                 <Icons.Package size={48} className="mx-auto mb-2 text-stone-300" />
-                <p className="text-stone-400 font-medium">No hay insumos pendientes de compra.</p>
+                <p className="text-stone-400 font-medium">{t.noPendingPurchases || 'No hay insumos pendientes de compra.'}</p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* Purchase Confirmation Modal */}
+      {isPurchaseModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+            <div className="p-6 border-b border-stone-100 dark:border-stone-800 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-stone-900 dark:text-white">{t.confirmPurchases || 'Confirmar Compras'}</h3>
+              <button 
+                onClick={() => setIsPurchaseModalOpen(false)}
+                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+              >
+                <Icons.Close size={24} />
+              </button>
+            </div>
+            
+            <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+              <p className="text-sm text-stone-500 mb-4">{t.adjustPurchasesInfo || 'Ajusta las cantidades reales que has comprado. Estas se sumarán a tu stock actual.'}</p>
+              
+              {shoppingList.filter(item => purchasedItems.has(item.key)).map(item => (
+                <div key={item.key} className="flex items-center justify-between gap-4">
+                  <span className="font-medium text-stone-700 dark:text-stone-300 capitalize flex-1 truncate">{item.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input 
+                      type="number" 
+                      className="w-24 p-2 text-right bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-stone-900 dark:text-white focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                      value={purchaseQuantities[item.key] === 0 ? '' : purchaseQuantities[item.key]}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setPurchaseQuantities(prev => ({
+                          ...prev,
+                          [item.key]: isNaN(val) ? 0 : val
+                        }));
+                      }}
+                    />
+                    <span className="text-xs text-stone-500 w-8">{item.unit}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="p-6 border-t border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsPurchaseModalOpen(false)}
+                className="px-4 py-2 text-stone-600 dark:text-stone-400 font-medium hover:bg-stone-200 dark:hover:bg-stone-800 rounded-xl transition-colors"
+              >
+                {t.cancel || 'Cancelar'}
+              </button>
+              <button 
+                onClick={confirmPurchase}
+                className="px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 transition-colors shadow-sm"
+              >
+                {t.updateStock || 'Actualizar Stock'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -652,6 +652,8 @@ export default function App() {
                onUpdateUnsoldProducts={setUnsoldProducts}
                linkOrdersToSales={linkOrdersToSales}
                onUpdateLinkOrdersToSales={setLinkOrdersToSales}
+               inventoryStock={inventoryStock}
+               onUpdateInventoryStock={setInventoryStock}
                onSaveHistory={(record) => setHistoryRecords([record, ...historyRecords])}
                t={t}
             />

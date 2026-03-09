@@ -15,6 +15,8 @@ interface SummaryProps {
   onUpdateUnsoldProducts: (products: UnsoldProduct[]) => void;
   linkOrdersToSales: boolean;
   onUpdateLinkOrdersToSales: (link: boolean) => void;
+  inventoryStock: Record<string, number>;
+  onUpdateInventoryStock: (stock: Record<string, number>) => void;
   onSaveHistory: (record: any) => void;
   t: any;
 }
@@ -32,6 +34,8 @@ export const Summary: React.FC<SummaryProps> = ({
   onUpdateUnsoldProducts,
   linkOrdersToSales,
   onUpdateLinkOrdersToSales,
+  inventoryStock,
+  onUpdateInventoryStock,
   onSaveHistory,
   t 
 }) => {
@@ -234,7 +238,12 @@ export const Summary: React.FC<SummaryProps> = ({
 
     // 2. Process Linked Sales
     if (linkOrdersToSales) {
-      sales.forEach(sale => {
+      const filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.date).toISOString().split('T')[0];
+        return saleDate === summaryDate;
+      });
+
+      filteredSales.forEach(sale => {
         totalRevenue += sale.amount;
         totalCost += sale.cost;
         
@@ -277,13 +286,104 @@ export const Summary: React.FC<SummaryProps> = ({
     };
   }, [recipes, selectedRecipes, pantry, sales, debts, unsoldProducts, linkOrdersToSales]);
 
+  const handleConsolidate = () => {
+    // 1. Calculate required ingredients
+    const ingredientsNeeded: Record<string, { name: string, quantity: number }> = {};
+
+    const addIngredients = (recipe: Recipe, count: number) => {
+      recipe.ingredients.forEach(ing => {
+        const key = normalizeKey(ing.name);
+        if (ingredientsNeeded[key]) {
+          ingredientsNeeded[key].quantity += ing.quantity * count;
+        } else {
+          ingredientsNeeded[key] = { name: ing.name, quantity: ing.quantity * count };
+        }
+      });
+    };
+
+    // Manual Sales
+    Object.entries(selectedRecipes).forEach(([recipeId, count]) => {
+      const recipe = recipes.find(r => r.id === recipeId);
+      if (recipe) addIngredients(recipe, count);
+    });
+
+    // Linked Sales
+    if (linkOrdersToSales) {
+      const filteredSales = sales.filter(sale => {
+        const saleDate = new Date(sale.date).toISOString().split('T')[0];
+        return saleDate === summaryDate;
+      });
+      filteredSales.forEach(sale => {
+        if (sale.recipeId) {
+          const recipe = recipes.find(r => r.id === sale.recipeId);
+          if (recipe) addIngredients(recipe, sale.quantity);
+        }
+      });
+    }
+
+    // 2. Check stock sufficiency
+    const insufficientStock: string[] = [];
+    Object.entries(ingredientsNeeded).forEach(([key, needed]) => {
+      const currentStock = inventoryStock[key] || 0;
+      if (currentStock < needed.quantity) {
+        insufficientStock.push(`${needed.name} (Faltan: ${(needed.quantity - currentStock).toFixed(2)})`);
+      }
+    });
+
+    if (insufficientStock.length > 0) {
+      const msg = t.insufficientStockMsg ? t.insufficientStockMsg.replace('{stock}', insufficientStock.join('\n')) : `Stock Insuficiente para consolidar la producción:\n\n${insufficientStock.join('\n')}\n\nPor favor, actualiza el stock en la sección de Inventario antes de guardar.`;
+      alert(msg);
+      return; // Prevent consolidation
+    }
+
+    // 3. Deduct stock
+    const newStock = { ...inventoryStock };
+    Object.entries(ingredientsNeeded).forEach(([key, needed]) => {
+      if (newStock[key] !== undefined) {
+        newStock[key] -= needed.quantity;
+        // Prevent negative just in case, though we already checked
+        if (newStock[key] < 0) newStock[key] = 0; 
+      }
+    });
+    onUpdateInventoryStock(newStock);
+
+    // 4. Save History Record
+    const record = {
+      id: Date.now().toString(),
+      date: new Date(summaryDate).getTime(),
+      periodLabel: summaryDate,
+      revenue: financials.revenue,
+      cost: financials.cost,
+      profit: financials.profit,
+      totalDebts: financials.totalDebts,
+      totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + (p.totalValue || 0), 0),
+      salesCount: Object.keys(selectedRecipes).length + (linkOrdersToSales ? sales.filter(s => new Date(s.date).toISOString().split('T')[0] === summaryDate).length : 0),
+      debtsCount: debts.length,
+      unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0)
+    };
+    onSaveHistory(record);
+    
+    alert(t.dataConsolidated || 'Datos consolidados y guardados en Evolución. El stock ha sido actualizado.');
+    
+    // 5. Clear current data
+    setSelectedRecipes({});
+    onUpdateDebts([]);
+    onUpdateUnsoldProducts([]);
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20">
+      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex justify-between items-center">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-indigo-600 text-white p-1.5 rounded-lg"><Icons.PieChart size={24} /></span>
-          Finanzas
+          {t.finances || 'Finanzas'}
         </h1>
+        <input 
+          type="date" 
+          value={summaryDate}
+          onChange={(e) => setSummaryDate(e.target.value)}
+          className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm font-medium"
+        />
       </div>
 
       <div className="p-4 space-y-6">
@@ -294,9 +394,9 @@ export const Summary: React.FC<SummaryProps> = ({
           {/* Columna 1: Ventas */}
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 flex flex-col">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-stone-800 dark:text-white">Ventas</h2>
+              <h2 className="font-bold text-stone-800 dark:text-white">{t.sales || 'Ventas'}</h2>
               <label className="flex items-center cursor-pointer gap-2">
-                <span className="text-xs text-stone-500 font-medium">Vincular Pedidos</span>
+                <span className="text-xs text-stone-500 font-medium">{t.linkOrders || 'Vincular Pedidos'}</span>
                 <div className="relative">
                   <input 
                     type="checkbox" 
@@ -316,7 +416,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 value={selectedRecipeToAdd}
                 onChange={e => setSelectedRecipeToAdd(e.target.value)}
               >
-                <option value="">Seleccionar producto...</option>
+                <option value="">{t.selectProduct || 'Seleccionar producto...'}</option>
                 {recipes.map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
@@ -326,7 +426,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 disabled={!selectedRecipeToAdd}
                 className="px-3 bg-indigo-600 text-white rounded-xl font-bold disabled:opacity-50 text-sm"
               >
-                Añadir
+                {t.add || 'Añadir'}
               </button>
             </div>
 
@@ -349,19 +449,19 @@ export const Summary: React.FC<SummaryProps> = ({
                   );
               })}
               {Object.keys(selectedRecipes).length === 0 && (
-                <p className="text-center text-stone-400 text-xs py-4">No hay ventas manuales registradas.</p>
+                <p className="text-center text-stone-400 text-xs py-4">{t.noManualSales || 'No hay ventas manuales registradas.'}</p>
               )}
             </div>
           </div>
 
           {/* Columna 2: Deudas */}
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 flex flex-col">
-            <h2 className="font-bold text-stone-800 dark:text-white mb-4">Deudas</h2>
+            <h2 className="font-bold text-stone-800 dark:text-white mb-4">{t.debts || 'Deudas'}</h2>
             
             <div className="flex flex-col gap-2 mb-4">
               <input 
                 type="text" 
-                placeholder="Nombre del deudor" 
+                placeholder={t.debtorName || "Nombre del deudor"} 
                 className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                 value={newDebtName}
                 onChange={e => setNewDebtName(e.target.value)}
@@ -372,7 +472,7 @@ export const Summary: React.FC<SummaryProps> = ({
                   value={newDebtRecipeId}
                   onChange={e => setNewDebtRecipeId(e.target.value)}
                 >
-                  <option value="">Seleccionar producto...</option>
+                  <option value="">{t.selectProduct || 'Seleccionar producto...'}</option>
                   {recipes.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
@@ -380,14 +480,14 @@ export const Summary: React.FC<SummaryProps> = ({
                 {newDebtRecipeId && recipes.find(r => r.id === newDebtRecipeId)?.mode === 'BATCH' && (
                    <label className="flex items-center gap-1 text-xs text-stone-500 cursor-pointer">
                      <input type="checkbox" checked={newDebtIsBatch} onChange={e => setNewDebtIsBatch(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
-                     Lote
+                     {t.batch || 'Lote'}
                    </label>
                 )}
               </div>
               <div className="flex gap-2">
                 <input 
                   type="number" 
-                  placeholder="Monto" 
+                  placeholder={t.amount || "Monto"} 
                   className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newDebtAmount}
                   onChange={e => setNewDebtAmount(e.target.value)}
@@ -407,7 +507,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 <div key={debt.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center">
                   <div className="flex flex-col">
                     <span className="font-bold text-stone-700 dark:text-stone-300 text-sm">{debt.debtorName}</span>
-                    <span className="text-xs text-stone-500">{debt.product} {debt.isBatch ? '(Lote)' : ''}</span>
+                    <span className="text-xs text-stone-500">{debt.product} {debt.isBatch ? `(${t.batch || 'Lote'})` : ''}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold text-red-500 text-sm">${debt.amount.toFixed(2)}</span>
@@ -416,19 +516,19 @@ export const Summary: React.FC<SummaryProps> = ({
                 </div>
               ))}
               {debts.length === 0 && (
-                <p className="text-center text-stone-400 text-xs py-4">No hay deudas registradas.</p>
+                <p className="text-center text-stone-400 text-xs py-4">{t.noDebts || 'No hay deudas registradas.'}</p>
               )}
             </div>
             
             <div className="mt-4 pt-3 border-t border-stone-100 dark:border-stone-800 flex justify-between items-center">
-              <span className="text-xs font-bold text-stone-400 uppercase">Total Deudas</span>
+              <span className="text-xs font-bold text-stone-400 uppercase">{t.totalDebts || 'Total Deudas'}</span>
               <span className="font-bold text-red-500">${financials.totalDebts.toFixed(2)}</span>
             </div>
           </div>
 
           {/* Columna 3: Productos */}
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 flex flex-col">
-            <h2 className="font-bold text-stone-800 dark:text-white mb-4">Productos Pendientes</h2>
+            <h2 className="font-bold text-stone-800 dark:text-white mb-4">{t.pendingProducts || 'Productos Pendientes'}</h2>
             
             <div className="flex flex-col gap-2 mb-4">
               <div className="flex gap-2 items-center">
@@ -437,7 +537,7 @@ export const Summary: React.FC<SummaryProps> = ({
                   value={newUnsoldRecipeId}
                   onChange={e => setNewUnsoldRecipeId(e.target.value)}
                 >
-                  <option value="">Seleccionar producto...</option>
+                  <option value="">{t.selectProduct || 'Seleccionar producto...'}</option>
                   {recipes.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
@@ -445,14 +545,14 @@ export const Summary: React.FC<SummaryProps> = ({
                 {newUnsoldRecipeId && recipes.find(r => r.id === newUnsoldRecipeId)?.mode === 'BATCH' && (
                    <label className="flex items-center gap-1 text-xs text-stone-500 cursor-pointer">
                      <input type="checkbox" checked={newUnsoldIsBatch} onChange={e => setNewUnsoldIsBatch(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
-                     Lote
+                     {t.batch || 'Lote'}
                    </label>
                 )}
               </div>
               <div className="flex gap-2">
                 <input 
                   type="number" 
-                  placeholder="Cant." 
+                  placeholder={t.qty || "Cant."} 
                   className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newUnsoldQty}
                   onChange={e => setNewUnsoldQty(e.target.value)}
@@ -471,8 +571,8 @@ export const Summary: React.FC<SummaryProps> = ({
               {unsoldProducts.map(prod => (
                 <div key={prod.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center">
                   <div className="flex flex-col flex-1 min-w-0">
-                    <span className="font-medium text-stone-700 dark:text-stone-300 text-sm truncate">{prod.name} {prod.isBatch ? '(Lote)' : ''}</span>
-                    <span className="text-xs text-stone-500">Cant: {prod.quantity}</span>
+                    <span className="font-medium text-stone-700 dark:text-stone-300 text-sm truncate">{prod.name} {prod.isBatch ? `(${t.batch || 'Lote'})` : ''}</span>
+                    <span className="text-xs text-stone-500">{t.qty || 'Cant:'} {prod.quantity}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="font-bold text-stone-600 dark:text-stone-400 text-sm">${(prod.totalValue || 0).toFixed(2)}</span>
@@ -481,7 +581,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 </div>
               ))}
               {unsoldProducts.length === 0 && (
-                <p className="text-center text-stone-400 text-xs py-4">No hay productos pendientes.</p>
+                <p className="text-center text-stone-400 text-xs py-4">{t.noPendingProducts || 'No hay productos pendientes.'}</p>
               )}
             </div>
           </div>
@@ -490,67 +590,47 @@ export const Summary: React.FC<SummaryProps> = ({
 
         <div className="flex justify-end mt-4">
           <button 
-            onClick={() => {
-              const record = {
-                id: Date.now().toString(),
-                date: new Date(summaryDate).getTime(),
-                periodLabel: summaryDate,
-                revenue: financials.revenue,
-                cost: financials.cost,
-                profit: financials.profit,
-                totalDebts: financials.totalDebts,
-                totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + (p.totalValue || 0), 0),
-                salesCount: Object.keys(selectedRecipes).length + (linkOrdersToSales ? sales.length : 0),
-                debtsCount: debts.length,
-                unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0)
-              };
-              onSaveHistory(record);
-              alert('Datos consolidados y guardados en Evolución.');
-              // Opcionalmente limpiar los datos actuales
-              setSelectedRecipes({});
-              onUpdateDebts([]);
-              onUpdateUnsoldProducts([]);
-            }}
+            onClick={handleConsolidate}
             className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2"
           >
             <Icons.Save size={20} />
-            Guardar / Consolidar
+            {t.saveConsolidate || 'Guardar / Consolidar'}
           </button>
         </div>
 
         {/* Panel Inferior: Dashboard de Balance */}
         <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in slide-in-from-bottom-4">
-          <h2 className="font-bold text-stone-800 dark:text-white text-lg mb-6">Balance General</h2>
+          <h2 className="font-bold text-stone-800 dark:text-white text-lg mb-6">{t.generalBalance || 'Balance General'}</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Métricas Principales */}
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-stone-50 dark:bg-stone-800 p-4 rounded-2xl border border-stone-100 dark:border-stone-700">
-                <p className="text-xs font-bold text-stone-400 uppercase mb-1">Ingresos Brutos</p>
+                <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.grossRevenue || 'Ingresos Brutos'}</p>
                 <p className="text-2xl font-bold text-stone-900 dark:text-white">${financials.revenue.toFixed(2)}</p>
               </div>
               <div className="bg-stone-50 dark:bg-stone-800 p-4 rounded-2xl border border-stone-100 dark:border-stone-700">
-                <p className="text-xs font-bold text-stone-400 uppercase mb-1">Costos Totales</p>
+                <p className="text-xs font-bold text-stone-400 uppercase mb-1">{t.totalCosts || 'Costos Totales'}</p>
                 <p className="text-2xl font-bold text-stone-900 dark:text-white">${financials.cost.toFixed(2)}</p>
               </div>
               <div className="bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-2xl border border-indigo-100 dark:border-indigo-800 col-span-2">
-                <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-1">Ganancia Neta</p>
+                <p className="text-xs font-bold text-indigo-500 dark:text-indigo-400 uppercase mb-1">{t.netProfit || 'Ganancia Neta'}</p>
                 <p className="text-4xl font-bold text-indigo-600 dark:text-indigo-300">${financials.profit.toFixed(2)}</p>
               </div>
               <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-2xl border border-red-100 dark:border-red-800">
-                <p className="text-xs font-bold text-red-500 dark:text-red-400 uppercase mb-1">Cuentas por Cobrar</p>
+                <p className="text-xs font-bold text-red-500 dark:text-red-400 uppercase mb-1">{t.accountsReceivable || 'Cuentas por Cobrar'}</p>
                 <p className="text-xl font-bold text-red-600 dark:text-red-300">${financials.totalDebts.toFixed(2)}</p>
               </div>
               <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-100 dark:border-amber-800">
-                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-1">Pendientes Venta</p>
-                <p className="text-xl font-bold text-amber-700 dark:text-amber-300">{financials.totalUnsold} unid.</p>
+                <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-1">{t.pendingSales || 'Pendientes Venta'}</p>
+                <p className="text-xl font-bold text-amber-700 dark:text-amber-300">{financials.totalUnsold} {t.units || 'unid.'}</p>
               </div>
             </div>
 
             {/* Gráfico Circular */}
             <div className="flex flex-col h-full min-h-[250px]">
-              <h3 className="text-xs font-bold text-stone-400 uppercase text-center mb-2">Uso de Materia Prima</h3>
+              <h3 className="text-xs font-bold text-stone-400 uppercase text-center mb-2">{t.rawMaterialUse || 'Uso de Materia Prima'}</h3>
               {financials.pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -574,7 +654,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 </ResponsiveContainer>
               ) : (
                 <div className="flex-1 flex items-center justify-center text-stone-400 text-sm bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-100 dark:border-stone-700">
-                  No hay datos suficientes para el gráfico
+                  {t.noDataForChart || 'No hay datos suficientes para el gráfico'}
                 </div>
               )}
             </div>

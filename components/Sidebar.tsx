@@ -112,8 +112,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {!isCollapsed && (
                   <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-stone-800 dark:text-white truncate">Usuario</p>
-                      <p className="text-xs text-stone-400 truncate">Pro Version</p>
+                      <p className="text-sm font-bold text-stone-800 dark:text-white truncate">{t.user}</p>
+                      <p className="text-xs text-stone-400 truncate">{t.proVersion}</p>
                   </div>
               )}
           </div>

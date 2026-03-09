@@ -85,7 +85,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
 
   const handleSave = () => {
     if (!customerName || !product || !deliveryTime || (!isRecurring && !deliveryDate)) {
-      alert("Por favor completa los campos requeridos");
+      alert(t.fillRequiredFields || "Por favor completa los campos requeridos");
       return;
     }
 
@@ -160,19 +160,19 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
         }
       } catch (ex) {
         console.error(ex);
-        alert("Error al acceder a contactos o permiso denegado.");
+        alert(t.contactsError || "Error al acceder a contactos o permiso denegado.");
       }
     } else {
-      alert("Tu dispositivo no soporta la selección de contactos.");
+      alert(t.contactsNotSupported || "Tu dispositivo no soporta la selección de contactos.");
     }
   };
 
   const handleExport = () => {
     if (!startDate || !endDate) {
-      alert("Selecciona un rango de fechas");
+      alert(t.selectDateRange || "Selecciona un rango de fechas");
       return;
     }
-    alert("Exportando...");
+    alert(t.exporting || "Exportando...");
   };
 
   const sortedOrders = [...orders]
@@ -197,7 +197,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
       {showPhonePicker && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 animate-in fade-in">
               <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-xl max-w-sm w-full">
-                  <h3 className="font-bold text-lg mb-4 dark:text-white">Selecciona un número</h3>
+                  <h3 className="font-bold text-lg mb-4 dark:text-white">{t.selectNumber || 'Selecciona un número'}</h3>
                   <div className="space-y-2">
                       {contactPhoneOptions.map((p, idx) => (
                           <button 
@@ -217,7 +217,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                     onClick={() => setShowPhonePicker(false)}
                     className="mt-4 w-full py-3 text-stone-500 font-bold"
                   >
-                      Cancelar
+                      {t.cancel || 'Cancelar'}
                   </button>
               </div>
           </div>
@@ -244,13 +244,13 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
               onClick={() => setActiveTab('PENDING')} 
               className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'PENDING' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
           >
-              Pendientes
+              {t.pendingStatus || 'Pendientes'}
           </button>
           <button 
               onClick={() => setActiveTab('COMPLETED')} 
               className={`flex-1 py-3 text-xs font-bold uppercase tracking-wide transition-colors ${activeTab === 'COMPLETED' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
           >
-              Entregas
+              {t.completedStatus || 'Entregas'}
           </button>
       </div>
 
@@ -286,10 +286,10 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                       <button 
                         onClick={handleContactPick}
                         className="p-3 bg-stone-100 dark:bg-stone-800 text-stone-500 rounded-xl hover:bg-stone-200 dark:hover:bg-stone-700 transition"
-                        title="Buscar contacto"
+                        title={t.searchContact || "Buscar contacto"}
                         type="button"
                       >
-                        {Icons.Users ? <Icons.Users size={20} /> : <span className="text-xs">Contactos</span>}
+                        {Icons.Users ? <Icons.Users size={20} /> : <span className="text-xs">{t.contacts || 'Contactos'}</span>}
                       </button>
                     </div>
                   </div>
@@ -302,7 +302,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                     value={recipeId}
                     onChange={handleRecipeSelect}
                 >
-                    <option value="">-- Manual --</option>
+                    <option value="">-- {t.manual || 'Manual'} --</option>
                     {recipes.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                 </select>
                 <input 
@@ -369,7 +369,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                               ))}
                           </div>
                           <div>
-                            <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">Hora</label>
+                            <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.timeLabel || 'Hora'}</label>
                             <input 
                                 type="time" 
                                 className="w-full p-2 bg-white dark:bg-stone-900 rounded-lg border border-stone-200 dark:border-stone-600 dark:text-white"
@@ -390,7 +390,7 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                         />
                         </div>
                         <div className="flex-1">
-                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">Hora</label>
+                        <label className="text-[10px] font-bold text-stone-400 uppercase mb-1 block">{t.timeLabel || 'Hora'}</label>
                         <input 
                             type="time" 
                             className="w-full p-2 bg-white dark:bg-stone-900 rounded-lg border border-stone-200 dark:border-stone-600 dark:text-white"
@@ -524,13 +524,13 @@ export const Orders: React.FC<OrdersProps> = ({ orders, recipes = [], onAddOrder
                     <div className="mb-3 animate-pulse">
                         <button 
                             onClick={() => {
-                                if (confirm("¿Confirmar entrega de este pedido? Se moverá a la sección Entregas.")) {
+                                if (confirm(t.confirmDeliveryPrompt || "¿Confirmar entrega de este pedido? Se moverá a la sección Entregas.")) {
                                     onUpdateOrder({ ...order, status: 'COMPLETED' });
                                 }
                             }}
                             className="w-full py-2 bg-green-100 text-green-700 rounded-lg text-xs font-bold flex items-center justify-center gap-2 hover:bg-green-200 transition border border-green-200"
                         >
-                            <Icons.Check size={14} /> Confirmar Entrega
+                            <Icons.Check size={14} /> {t.confirmDelivery || 'Confirmar Entrega'}
                         </button>
                     </div>
                 )}
