@@ -453,6 +453,56 @@ export const Summary: React.FC<SummaryProps> = ({
     alert('Datos consolidados y guardados en Evolución. El stock ha sido actualizado.');
   };
 
+  const handleDownloadArchiveDocx = (archive: DailyArchiveRecord) => {
+    const content = `
+      <html>
+        <head><meta charset="utf-8"></head>
+        <body>
+          <h1>Reporte Diario - HorneFin</h1>
+          <p><strong>Fecha:</strong> ${archive.dateLabel}</p>
+          <hr/>
+          <h2>Resumen Financiero</h2>
+          <ul>
+            <li><strong>Ingresos Brutos:</strong> $${archive.revenue.toFixed(2)}</li>
+            <li><strong>Costos de Producción:</strong> $${archive.cost.toFixed(2)}</li>
+            <li><strong>Ganancia Neta:</strong> $${archive.profit.toFixed(2)}</li>
+            <li><strong>Total Deudas:</strong> $${archive.totalDebts.toFixed(2)}</li>
+            <li><strong>Valor Productos Pendientes:</strong> $${archive.totalUnsoldValue.toFixed(2)}</li>
+          </ul>
+          <hr/>
+          <h2>Detalles Operativos</h2>
+          <ul>
+            <li><strong>Ventas (Cantidad):</strong> ${archive.salesCount}</li>
+            <li><strong>Deudas (Cantidad):</strong> ${archive.debtsCount}</li>
+            <li><strong>Productos Pendientes (Cantidad):</strong> ${archive.unsoldQty}</li>
+          </ul>
+        </body>
+      </html>
+    `;
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reporte_Diario_${archive.dateLabel.replace(/\//g, '-')}.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShareArchiveWhatsApp = (archive: DailyArchiveRecord) => {
+    const text = `*Reporte Diario - HorneFin* 📊\n*Fecha:* ${archive.dateLabel}\n\n` +
+      `*Ingresos Brutos:* $${archive.revenue.toFixed(2)}\n` +
+      `*Costos de Producción:* $${archive.cost.toFixed(2)}\n` +
+      `*Ganancia Neta:* $${archive.profit.toFixed(2)}\n` +
+      `*Deudas:* $${archive.totalDebts.toFixed(2)}\n` +
+      `*Productos Pendientes:* $${archive.totalUnsoldValue.toFixed(2)}\n\n` +
+      `Generado por HorneFin.`;
+    
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -811,9 +861,25 @@ export const Summary: React.FC<SummaryProps> = ({
                   <div key={archive.id} className="p-5 bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h3 className="font-bold text-lg text-stone-900 dark:text-white">{archive.dateLabel}</h3>
-                      <p className="text-sm text-stone-500">
+                      <p className="text-sm text-stone-500 mb-3">
                         Ventas: {archive.salesCount} | Deudas: {archive.debtsCount} | Pendientes: {archive.unsoldQty}
                       </p>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleDownloadArchiveDocx(archive)}
+                          className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                          title="Descargar Docx"
+                        >
+                          <Icons.Download size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleShareArchiveWhatsApp(archive)}
+                          className="p-2 bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors"
+                          title="Compartir por WhatsApp"
+                        >
+                          <Icons.Share size={16} />
+                        </button>
+                      </div>
                     </div>
                     <div className="flex gap-4 text-right">
                       <div>

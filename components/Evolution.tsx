@@ -13,7 +13,7 @@ interface EvolutionProps {
 
 export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, initialCapital, totalPurchases, onUpdateInitialCapital, t }) => {
   const [periodFilter, setPeriodFilter] = useState<'ALL' | 'DAY' | 'WEEK' | 'MONTH'>('ALL');
-  const [tempCapital, setTempCapital] = useState(initialCapital.toString());
+  const [tempCapital, setTempCapital] = useState((initialCapital || 0).toString());
 
   const filteredRecords = useMemo(() => {
     const now = new Date();
@@ -31,6 +31,25 @@ export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, initialCap
       return true;
     });
   }, [historyRecords, periodFilter]);
+
+  const currentWorkingCapital = useMemo(() => {
+    const totalRevenue = historyRecords.reduce((sum, r) => sum + (r.revenue || 0), 0);
+    const totalCost = historyRecords.reduce((sum, r) => sum + (r.cost || 0), 0);
+    return initialCapital + totalRevenue - totalCost - totalPurchases;
+  }, [historyRecords, initialCapital, totalPurchases]);
+
+  const chartData = useMemo(() => {
+    const sortedRecords = [...filteredRecords].sort((a, b) => a.date - b.date);
+    let currentCap = initialCapital;
+    return sortedRecords.map(record => {
+      currentCap += (record.revenue || 0) - (record.cost || 0);
+      return {
+        date: new Date(record.date).toLocaleDateString(),
+        profit: (record.revenue || 0) - (record.cost || 0),
+        capital: currentCap
+      };
+    });
+  }, [filteredRecords, initialCapital]);
 
   const summary = useMemo(() => {
     return filteredRecords.reduce((acc, record) => {
@@ -139,6 +158,43 @@ export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, initialCap
       </div>
 
       <div className="p-4 space-y-6">
+        {/* Capital de Inversión */}
+        <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in fade-in">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <h2 className="font-bold text-stone-800 dark:text-white text-lg">Capital de Trabajo</h2>
+              <p className="text-sm text-stone-500">Capital Inicial + Ingresos - Costos - Compras</p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
+              <div className="flex flex-col w-full sm:w-auto">
+                <label className="text-xs font-bold text-stone-400 uppercase mb-1">Capital Inicial ($)</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    type="number" 
+                    value={tempCapital}
+                    onChange={(e) => setTempCapital(e.target.value)}
+                    className="w-full sm:w-32 p-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold text-stone-900 dark:text-white outline-none focus:border-blue-500"
+                  />
+                  <button 
+                    onClick={() => onUpdateInitialCapital(parseFloat(tempCapital) || 0)}
+                    className="p-2 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-xl hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    title="Guardar Capital Inicial"
+                  >
+                    <Icons.Save size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="h-12 w-px bg-stone-200 dark:bg-stone-700 hidden sm:block"></div>
+              <div className="flex flex-col items-start sm:items-end w-full sm:w-auto">
+                <label className="text-xs font-bold text-stone-400 uppercase mb-1">Capital Actual</label>
+                <span className={`text-2xl font-black ${currentWorkingCapital >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                  ${currentWorkingCapital.toFixed(2)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Acciones */}
         <div className="flex flex-wrap gap-3 justify-end">
           <button 
@@ -180,6 +236,30 @@ export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, initialCap
             <p className="text-2xl font-black text-amber-500">${summary.totalUnsoldValue.toFixed(2)}</p>
           </div>
         </div>
+
+        {/* Gráfico de Tendencia */}
+        {chartData.length > 0 && (
+          <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in fade-in">
+            <h2 className="font-bold text-stone-800 dark:text-white text-lg mb-6">Tendencia de Capital</h2>
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+                  <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} dy={10} />
+                  <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                  <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9ca3af' }} />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                    cursor={{ fill: 'rgba(0,0,0,0.05)' }}
+                  />
+                  <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                  <Bar yAxisId="left" dataKey="profit" name="Ganancia Neta" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                  <Line yAxisId="right" type="monotone" dataKey="capital" name="Capital Acumulado" stroke="#10b981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
 
         {/* Historial */}
         <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800">

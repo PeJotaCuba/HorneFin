@@ -684,6 +684,9 @@ export default function App() {
           {currentView === AppView.EVOLUTION && (
             <Evolution 
                historyRecords={historyRecords}
+               initialCapital={initialCapital}
+               totalPurchases={totalPurchases}
+               onUpdateInitialCapital={setInitialCapital}
                t={t}
             />
           )}
