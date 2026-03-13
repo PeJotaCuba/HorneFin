@@ -63,6 +63,9 @@ export default function App() {
   const [linkOrdersToSales, setLinkOrdersToSales] = useState(false);
   const [inventoryStock, setInventoryStock] = useState<Record<string, number>>({});
   const [historyRecords, setHistoryRecords] = useState<any[]>([]);
+  const [dailyArchives, setDailyArchives] = useState<any[]>([]);
+  const [initialCapital, setInitialCapital] = useState<number>(0);
+  const [totalPurchases, setTotalPurchases] = useState<number>(0);
 
   // Sidebar State
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -106,6 +109,9 @@ export default function App() {
         if (parsed.linkOrdersToSales !== undefined) setLinkOrdersToSales(!!parsed.linkOrdersToSales);
         if (parsed.inventoryStock && typeof parsed.inventoryStock === 'object') setInventoryStock(parsed.inventoryStock);
         if (Array.isArray(parsed.historyRecords)) setHistoryRecords(parsed.historyRecords);
+        if (Array.isArray(parsed.dailyArchives)) setDailyArchives(parsed.dailyArchives);
+        if (typeof parsed.initialCapital === 'number') setInitialCapital(parsed.initialCapital);
+        if (typeof parsed.totalPurchases === 'number') setTotalPurchases(parsed.totalPurchases);
         if (parsed.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(!!parsed.isSidebarCollapsed);
       } catch (e) {
         console.error("Error loading local data", e);
@@ -130,13 +136,16 @@ export default function App() {
         linkOrdersToSales,
         inventoryStock,
         historyRecords,
+        dailyArchives,
+        initialCapital,
+        totalPurchases,
         isSidebarCollapsed
       };
       localStorage.setItem('hornefin_data', JSON.stringify(data));
     } catch (e) {
       console.error("Error saving to localStorage (quota exceeded?)", e);
     }
-  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, debts, unsoldProducts, linkOrdersToSales, inventoryStock, historyRecords, isSidebarCollapsed]);
+  }, [recipes, pantry, baseRecipes, darkMode, language, orders, sales, debts, unsoldProducts, linkOrdersToSales, inventoryStock, historyRecords, dailyArchives, initialCapital, totalPurchases, isSidebarCollapsed]);
 
   // Manejo del botón Atrás (History API)
   useEffect(() => {
@@ -511,6 +520,10 @@ export default function App() {
       unsoldProducts,
       linkOrdersToSales,
       inventoryStock,
+      historyRecords,
+      dailyArchives,
+      initialCapital,
+      totalPurchases,
       isSidebarCollapsed
     };
     
@@ -533,6 +546,10 @@ export default function App() {
       if (data.unsoldProducts) setUnsoldProducts(data.unsoldProducts);
       if (data.linkOrdersToSales !== undefined) setLinkOrdersToSales(data.linkOrdersToSales);
       if (data.inventoryStock) setInventoryStock(data.inventoryStock);
+      if (data.historyRecords) setHistoryRecords(data.historyRecords);
+      if (data.dailyArchives) setDailyArchives(data.dailyArchives);
+      if (typeof data.initialCapital === 'number') setInitialCapital(data.initialCapital);
+      if (typeof data.totalPurchases === 'number') setTotalPurchases(data.totalPurchases);
       if (data.isSidebarCollapsed !== undefined) setIsSidebarCollapsed(data.isSidebarCollapsed);
   };
 
@@ -654,7 +671,12 @@ export default function App() {
                onUpdateLinkOrdersToSales={setLinkOrdersToSales}
                inventoryStock={inventoryStock}
                onUpdateInventoryStock={setInventoryStock}
-               onSaveHistory={(record) => setHistoryRecords([record, ...historyRecords])}
+               dailyArchives={dailyArchives}
+               onSaveDailyArchive={(record) => setDailyArchives([record, ...dailyArchives])}
+               onConsolidateArchives={(archiveIds, historyRecord) => {
+                 setDailyArchives(prev => prev.map(a => archiveIds.includes(a.id) ? { ...a, consolidated: true } : a));
+                 setHistoryRecords([historyRecord, ...historyRecords]);
+               }}
                t={t}
             />
           )}
@@ -673,6 +695,7 @@ export default function App() {
                orders={orders}
                inventoryStock={inventoryStock}
                onUpdateInventoryStock={setInventoryStock}
+               onRegisterPurchase={(cost) => setTotalPurchases(prev => prev + cost)}
                t={t} 
             />
           )}

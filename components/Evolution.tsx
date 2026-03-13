@@ -1,14 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { Icons } from './Icons';
 import { HistoryRecord } from '../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart } from 'recharts';
 
 interface EvolutionProps {
   historyRecords: HistoryRecord[];
+  initialCapital: number;
+  totalPurchases: number;
+  onUpdateInitialCapital: (capital: number) => void;
   t: any;
 }
 
-export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, t }) => {
+export const Evolution: React.FC<EvolutionProps> = ({ historyRecords, initialCapital, totalPurchases, onUpdateInitialCapital, t }) => {
   const [periodFilter, setPeriodFilter] = useState<'ALL' | 'DAY' | 'WEEK' | 'MONTH'>('ALL');
+  const [tempCapital, setTempCapital] = useState(initialCapital.toString());
 
   const filteredRecords = useMemo(() => {
     const now = new Date();

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Icons } from './Icons';
-import { Recipe, PantryItem, Order, Sale, Debt, UnsoldProduct } from '../types';
+import { Recipe, PantryItem, Order, Sale, Debt, UnsoldProduct, DailyArchiveRecord, HistoryRecord } from '../types';
 import { calculateIngredientCost, normalizeKey } from '../utils/units';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -17,7 +17,9 @@ interface SummaryProps {
   onUpdateLinkOrdersToSales: (link: boolean) => void;
   inventoryStock: Record<string, number>;
   onUpdateInventoryStock: (stock: Record<string, number>) => void;
-  onSaveHistory: (record: any) => void;
+  dailyArchives: DailyArchiveRecord[];
+  onSaveDailyArchive: (record: DailyArchiveRecord) => void;
+  onConsolidateArchives: (archiveIds: string[], historyRecord: HistoryRecord) => void;
   t: any;
 }
 
@@ -36,9 +38,12 @@ export const Summary: React.FC<SummaryProps> = ({
   onUpdateLinkOrdersToSales,
   inventoryStock,
   onUpdateInventoryStock,
-  onSaveHistory,
+  dailyArchives,
+  onSaveDailyArchive,
+  onConsolidateArchives,
   t 
 }) => {
+  const [activeTab, setActiveTab] = useState<'OPERATIVA' | 'ARCHIVO'>('OPERATIVA');
   // Ventas (Producción diaria) State
   const [selectedRecipes, setSelectedRecipes] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('summary_selected_recipes');
@@ -323,7 +328,7 @@ export const Summary: React.FC<SummaryProps> = ({
     };
   }, [recipes, selectedRecipes, pantry, sales, debts, unsoldProducts, linkOrdersToSales]);
 
-  const handleConsolidate = () => {
+  const handleSaveData = () => {
     // 1. Calculate required ingredients
     const ingredientsNeeded: Record<string, { name: string, quantity: number }> = {};
 
@@ -358,37 +363,11 @@ export const Summary: React.FC<SummaryProps> = ({
       });
     }
 
-    // 2. Check stock sufficiency
-    const insufficientStock: string[] = [];
-    Object.entries(ingredientsNeeded).forEach(([key, needed]) => {
-      const currentStock = inventoryStock[key] || 0;
-      if (currentStock < needed.quantity) {
-        insufficientStock.push(`${needed.name} (Faltan: ${(needed.quantity - currentStock).toFixed(2)})`);
-      }
-    });
-
-    if (insufficientStock.length > 0) {
-      const msg = t.insufficientStockMsg ? t.insufficientStockMsg.replace('{stock}', insufficientStock.join('\n')) : `Stock Insuficiente para consolidar la producción:\n\n${insufficientStock.join('\n')}\n\nPor favor, actualiza el stock en la sección de Inventario antes de guardar.`;
-      alert(msg);
-      return; // Prevent consolidation
-    }
-
-    // 3. Deduct stock
-    const newStock = { ...inventoryStock };
-    Object.entries(ingredientsNeeded).forEach(([key, needed]) => {
-      if (newStock[key] !== undefined) {
-        newStock[key] -= needed.quantity;
-        // Prevent negative just in case, though we already checked
-        if (newStock[key] < 0) newStock[key] = 0; 
-      }
-    });
-    onUpdateInventoryStock(newStock);
-
-    // 4. Save History Record
-    const record = {
+    // 2. Save Daily Archive Record
+    const record: DailyArchiveRecord = {
       id: Date.now().toString(),
       date: new Date(summaryDate).getTime(),
-      periodLabel: summaryDate,
+      dateLabel: summaryDate,
       revenue: financials.revenue,
       cost: financials.cost,
       profit: financials.profit,
@@ -396,36 +375,119 @@ export const Summary: React.FC<SummaryProps> = ({
       totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + p.amount, 0),
       salesCount: Object.keys(selectedRecipes).length + (linkOrdersToSales ? sales.filter(s => new Date(s.date).toISOString().split('T')[0] === summaryDate).length : 0),
       debtsCount: debts.length,
-      unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0)
+      unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0),
+      ingredientsNeeded,
+      consolidated: false
     };
-    onSaveHistory(record);
     
-    alert(t.dataConsolidated || 'Datos consolidados y guardados en Evolución. El stock ha sido actualizado.');
+    onSaveDailyArchive(record);
     
-    // 5. Clear current data
+    alert('Datos guardados en el Archivo Diario.');
+    
+    // 3. Clear current data
     setSelectedRecipes({});
     onUpdateDebts([]);
     onUpdateUnsoldProducts([]);
   };
 
+  const handleConsolidateArchive = () => {
+    const pendingArchives = dailyArchives.filter(a => !a.consolidated);
+    if (pendingArchives.length === 0) {
+      alert('No hay registros pendientes para consolidar.');
+      return;
+    }
+
+    // 1. Sum up all ingredients needed
+    const totalIngredientsNeeded: Record<string, { name: string, quantity: number }> = {};
+    pendingArchives.forEach(archive => {
+      Object.entries(archive.ingredientsNeeded).forEach(([key, needed]) => {
+        if (totalIngredientsNeeded[key]) {
+          totalIngredientsNeeded[key].quantity += needed.quantity;
+        } else {
+          totalIngredientsNeeded[key] = { name: needed.name, quantity: needed.quantity };
+        }
+      });
+    });
+
+    // 2. Check stock sufficiency
+    const insufficientStock: string[] = [];
+    Object.entries(totalIngredientsNeeded).forEach(([key, needed]) => {
+      const currentStock = inventoryStock[key] || 0;
+      if (currentStock < needed.quantity) {
+        insufficientStock.push(`${needed.name} (Faltan: ${(needed.quantity - currentStock).toFixed(2)})`);
+      }
+    });
+
+    if (insufficientStock.length > 0) {
+      const msg = t.insufficientStockMsg ? t.insufficientStockMsg.replace('{stock}', insufficientStock.join('\n')) : `Stock Insuficiente para consolidar la producción:\n\n${insufficientStock.join('\n')}\n\nPor favor, actualiza el stock en la sección de Inventario antes de consolidar.`;
+      alert(msg);
+      return; // Prevent consolidation
+    }
+
+    // 3. Deduct stock
+    const newStock = { ...inventoryStock };
+    Object.entries(totalIngredientsNeeded).forEach(([key, needed]) => {
+      if (newStock[key] !== undefined) {
+        newStock[key] -= needed.quantity;
+        if (newStock[key] < 0) newStock[key] = 0; 
+      }
+    });
+    onUpdateInventoryStock(newStock);
+
+    // 4. Create History Record
+    const historyRecord: HistoryRecord = {
+      id: Date.now().toString(),
+      date: Date.now(),
+      periodLabel: `Consolidado (${pendingArchives.length} días)`,
+      revenue: pendingArchives.reduce((sum, a) => sum + a.revenue, 0),
+      cost: pendingArchives.reduce((sum, a) => sum + a.cost, 0),
+      profit: pendingArchives.reduce((sum, a) => sum + a.profit, 0),
+      totalDebts: pendingArchives.reduce((sum, a) => sum + a.totalDebts, 0),
+      totalUnsoldValue: pendingArchives.reduce((sum, a) => sum + a.totalUnsoldValue, 0),
+      salesCount: pendingArchives.reduce((sum, a) => sum + a.salesCount, 0),
+      debtsCount: pendingArchives.reduce((sum, a) => sum + a.debtsCount, 0),
+      unsoldQty: pendingArchives.reduce((sum, a) => sum + a.unsoldQty, 0)
+    };
+
+    onConsolidateArchives(pendingArchives.map(a => a.id), historyRecord);
+    alert('Datos consolidados y guardados en Evolución. El stock ha sido actualizado.');
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
-      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex justify-between items-center">
+      <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h1 className="text-2xl font-bold text-stone-900 dark:text-white flex items-center gap-2">
           <span className="bg-indigo-600 text-white p-1.5 rounded-lg"><Icons.PieChart size={24} /></span>
           {t.finances || 'Finanzas'}
         </h1>
-        <input 
-          type="date" 
-          value={summaryDate}
-          onChange={(e) => setSummaryDate(e.target.value)}
-          className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm font-medium"
-        />
+        <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+            <button 
+                onClick={() => setActiveTab('OPERATIVA')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'OPERATIVA' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+            >
+                Operativa Actual
+            </button>
+            <button 
+                onClick={() => setActiveTab('ARCHIVO')}
+                className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'ARCHIVO' ? 'bg-white dark:bg-stone-700 shadow-sm text-stone-900 dark:text-white' : 'text-stone-500'}`}
+            >
+                Archivo Diario
+            </button>
+        </div>
+        {activeTab === 'OPERATIVA' && (
+          <input 
+            type="date" 
+            value={summaryDate}
+            onChange={(e) => setSummaryDate(e.target.value)}
+            className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm font-medium"
+          />
+        )}
       </div>
 
       <div className="p-4 space-y-6">
-        
-        {/* Panel Superior: 3 Columnas */}
+        {activeTab === 'OPERATIVA' ? (
+          <>
+            {/* Panel Superior: 3 Columnas */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* Columna 1: Ventas */}
@@ -652,16 +714,6 @@ export const Summary: React.FC<SummaryProps> = ({
 
         </div>
 
-        <div className="flex justify-end mt-4">
-          <button 
-            onClick={handleConsolidate}
-            className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2"
-          >
-            <Icons.Save size={20} />
-            {t.saveConsolidate || 'Guardar / Consolidar'}
-          </button>
-        </div>
-
         {/* Panel Inferior: Dashboard de Balance */}
         <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in slide-in-from-bottom-4">
           <h2 className="font-bold text-stone-800 dark:text-white text-lg mb-6">{t.generalBalance || 'Balance General'}</h2>
@@ -726,9 +778,68 @@ export const Summary: React.FC<SummaryProps> = ({
               )}
             </div>
 
+            <div className="mt-6">
+              <button 
+                onClick={handleSaveData}
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-sm hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              >
+                <Icons.Save size={20} />
+                Guardar Datos en Archivo Diario
+              </button>
+            </div>
+
           </div>
         </div>
+        </>
+        ) : (
+          <div className="bg-white dark:bg-stone-900 p-6 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 animate-in fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-stone-900 dark:text-white">Archivo Diario Pendiente</h2>
+              <button 
+                onClick={handleConsolidateArchive}
+                disabled={dailyArchives.filter(a => !a.consolidated).length === 0}
+                className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-bold shadow-sm hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center gap-2"
+              >
+                <Icons.Check size={20} />
+                Guardar y Consolidar
+              </button>
+            </div>
 
+            {dailyArchives.filter(a => !a.consolidated).length > 0 ? (
+              <div className="space-y-4">
+                {dailyArchives.filter(a => !a.consolidated).map(archive => (
+                  <div key={archive.id} className="p-5 bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                      <h3 className="font-bold text-lg text-stone-900 dark:text-white">{archive.dateLabel}</h3>
+                      <p className="text-sm text-stone-500">
+                        Ventas: {archive.salesCount} | Deudas: {archive.debtsCount} | Pendientes: {archive.unsoldQty}
+                      </p>
+                    </div>
+                    <div className="flex gap-4 text-right">
+                      <div>
+                        <p className="text-xs font-bold text-stone-400 uppercase">Ingresos</p>
+                        <p className="font-bold text-emerald-600 dark:text-emerald-400">${archive.revenue.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-stone-400 uppercase">Costos</p>
+                        <p className="font-bold text-red-600 dark:text-red-400">${archive.cost.toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-stone-400 uppercase">Ganancia</p>
+                        <p className="font-bold text-indigo-600 dark:text-indigo-400">${archive.profit.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 opacity-50">
+                <Icons.PieChart size={48} className="mx-auto mb-4 text-stone-300" />
+                <p className="text-stone-400 font-medium">No hay registros pendientes en el archivo diario.</p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

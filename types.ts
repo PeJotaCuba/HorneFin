@@ -97,6 +97,22 @@ export interface Sale {
   type: 'ONE_TIME' | 'RECURRING';
 }
 
+export interface DailyArchiveRecord {
+  id: string;
+  date: number;
+  dateLabel: string;
+  revenue: number;
+  cost: number;
+  profit: number;
+  totalDebts: number;
+  totalUnsoldValue: number;
+  salesCount: number;
+  debtsCount: number;
+  unsoldQty: number;
+  ingredientsNeeded: Record<string, { name: string, quantity: number }>;
+  consolidated: boolean;
+}
+
 export interface HistoryRecord {
   id: string;
   date: number;

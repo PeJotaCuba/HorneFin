@@ -9,10 +9,11 @@ interface ShoppingProps {
   orders?: Order[];
   inventoryStock: Record<string, number>;
   onUpdateInventoryStock: (stock: Record<string, number>) => void;
+  onRegisterPurchase: (cost: number) => void;
   t: any;
 }
 
-export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], inventoryStock, onUpdateInventoryStock, t }) => {
+export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = [], inventoryStock, onUpdateInventoryStock, onRegisterPurchase, t }) => {
   const [mode, setMode] = useState<'STOCK' | 'COMPRAS'>('STOCK');
   const [period, setPeriod] = useState<'DAY' | 'WEEK' | 'MONTH'>('DAY');
   
@@ -143,12 +144,19 @@ export const Shopping: React.FC<ShoppingProps> = ({ recipes, pantry, orders = []
 
   const confirmPurchase = () => {
     const newStock = { ...inventoryStock };
+    let totalCost = 0;
     Object.entries(purchaseQuantities).forEach(([key, qty]) => {
       if (qty > 0) {
         newStock[key] = (newStock[key] || 0) + qty;
+        if (pantry[key]) {
+          totalCost += pantry[key].price * qty;
+        }
       }
     });
     onUpdateInventoryStock(newStock);
+    if (totalCost > 0) {
+      onRegisterPurchase(totalCost);
+    }
     setPurchasedItems(new Set());
     setIsPurchaseModalOpen(false);
     alert(t.stockUpdated || 'Stock actualizado con las compras confirmadas.');
