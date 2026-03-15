@@ -503,13 +503,30 @@ export const Summary: React.FC<SummaryProps> = ({
             <li><strong>Ganancia Neta:</strong> $${archive.profit.toFixed(2)}</li>
             <li><strong>Total Deudas:</strong> $${archive.totalDebts.toFixed(2)}</li>
             <li><strong>Valor Productos Pendientes:</strong> $${archive.totalUnsoldValue.toFixed(2)}</li>
+            <li><strong>Valor Merma:</strong> $${archive.totalWasteValue.toFixed(2)}</li>
+          </ul>
+          <hr/>
+          <h2>Ingredientes Utilizados</h2>
+          <ul>
+            ${Object.values(archive.ingredientsNeeded).map(ing => `<li>${ing.name}: ${ing.quantity.toFixed(2)}</li>`).join('')}
           </ul>
           <hr/>
           <h2>Detalles Operativos</h2>
+          <h3>Productos</h3>
           <ul>
-            <li><strong>Ventas (Cantidad):</strong> ${archive.salesCount}</li>
-            <li><strong>Deudas (Cantidad):</strong> ${archive.debtsCount}</li>
-            <li><strong>Productos Pendientes (Cantidad):</strong> ${archive.unsoldQty}</li>
+            ${archive.products.map(p => `<li>Producto ID: ${p.id}, Cantidad: ${p.qty}</li>`).join('')}
+          </ul>
+          <h3>Deudas</h3>
+          <ul>
+            ${archive.debts.map(d => `<li>${d.debtorName}: ${d.product} (${d.quantity}) - $${d.amount.toFixed(2)}</li>`).join('')}
+          </ul>
+          <h3>Pendientes</h3>
+          <ul>
+            ${archive.unsoldProducts.map(p => `<li>${p.name}: ${p.quantity} - $${p.amount.toFixed(2)}</li>`).join('')}
+          </ul>
+          <h3>Merma</h3>
+          <ul>
+            ${archive.wastes.map(w => `<li>${w.name}: ${w.quantity} - $${w.amount.toFixed(2)}</li>`).join('')}
           </ul>
         </body>
       </html>
@@ -527,11 +544,17 @@ export const Summary: React.FC<SummaryProps> = ({
 
   const handleShareArchiveWhatsApp = (archive: DailyArchiveRecord) => {
     const text = `*Reporte Diario - HorneFin* 📊\n*Fecha:* ${archive.dateLabel}\n\n` +
-      `*Ingresos Brutos:* $${archive.revenue.toFixed(2)}\n` +
-      `*Costos de Producción:* $${archive.cost.toFixed(2)}\n` +
-      `*Ganancia Neta:* $${archive.profit.toFixed(2)}\n` +
-      `*Deudas:* $${archive.totalDebts.toFixed(2)}\n` +
-      `*Productos Pendientes:* $${archive.totalUnsoldValue.toFixed(2)}\n\n` +
+      `*Resumen Financiero:*\n` +
+      `Ingresos: $${archive.revenue.toFixed(2)}\n` +
+      `Costos: $${archive.cost.toFixed(2)}\n` +
+      `Ganancia: $${archive.profit.toFixed(2)}\n` +
+      `Deudas: $${archive.totalDebts.toFixed(2)}\n` +
+      `Pendientes: $${archive.totalUnsoldValue.toFixed(2)}\n` +
+      `Merma: $${archive.totalWasteValue.toFixed(2)}\n\n` +
+      `*Ingredientes:*\n${Object.values(archive.ingredientsNeeded).map(ing => `${ing.name}: ${ing.quantity.toFixed(2)}`).join('\n')}\n\n` +
+      `*Deudas:*\n${archive.debts.map(d => `${d.debtorName}: ${d.product} ($${d.amount.toFixed(2)})`).join('\n')}\n\n` +
+      `*Pendientes:*\n${archive.unsoldProducts.map(p => `${p.name}: ${p.quantity} ($${p.amount.toFixed(2)})`).join('\n')}\n\n` +
+      `*Merma:*\n${archive.wastes.map(w => `${w.name}: ${w.quantity} ($${w.amount.toFixed(2)})`).join('\n')}\n\n` +
       `Generado por HorneFin.`;
     
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
