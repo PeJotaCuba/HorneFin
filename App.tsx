@@ -677,6 +677,7 @@ export default function App() {
                  setDailyArchives(prev => prev.map(a => archiveIds.includes(a.id) ? { ...a, consolidated: true } : a));
                  setHistoryRecords([historyRecord, ...historyRecords]);
                }}
+               onDeleteArchive={(id) => setDailyArchives(prev => prev.filter(a => a.id !== id))}
                t={t}
             />
           )}

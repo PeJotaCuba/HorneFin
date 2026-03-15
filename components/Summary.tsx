@@ -20,6 +20,7 @@ interface SummaryProps {
   dailyArchives: DailyArchiveRecord[];
   onSaveDailyArchive: (record: DailyArchiveRecord) => void;
   onConsolidateArchives: (archiveIds: string[], historyRecord: HistoryRecord) => void;
+  onDeleteArchive: (id: string) => void;
   t: any;
 }
 
@@ -41,6 +42,7 @@ export const Summary: React.FC<SummaryProps> = ({
   dailyArchives,
   onSaveDailyArchive,
   onConsolidateArchives,
+  onDeleteArchive,
   t 
 }) => {
   const [activeTab, setActiveTab] = useState<'OPERATIVA' | 'ARCHIVO'>('OPERATIVA');
@@ -57,13 +59,19 @@ export const Summary: React.FC<SummaryProps> = ({
     return today.toISOString().split('T')[0];
   });
 
-  // Deudas State
+  // Deudas State (debts is a prop)
   const [newDebtName, setNewDebtName] = useState('');
   const [newDebtRecipeId, setNewDebtRecipeId] = useState('');
   const [newDebtIsBatch, setNewDebtIsBatch] = useState(false);
   const [newDebtQty, setNewDebtQty] = useState('');
   const [newDebtUnitPrice, setNewDebtUnitPrice] = useState('');
   const [newDebtAmount, setNewDebtAmount] = useState('');
+
+  // Merma State
+  const [wastes, setWastes] = useState<Waste[]>([]);
+  const [newWasteName, setNewWasteName] = useState('');
+  const [newWasteQty, setNewWasteQty] = useState('');
+  const [newWasteAmount, setNewWasteAmount] = useState('');
 
   // Productos State
   const [newUnsoldRecipeId, setNewUnsoldRecipeId] = useState('');
@@ -215,6 +223,26 @@ export const Summary: React.FC<SummaryProps> = ({
 
   const removeUnsoldProduct = (id: string) => {
     onUpdateUnsoldProducts(unsoldProducts.filter(p => p.id !== id));
+  };
+
+  const addWaste = () => {
+    if (newWasteName && newWasteQty && newWasteAmount) {
+      const waste: Waste = {
+        id: Date.now().toString(),
+        name: newWasteName,
+        quantity: parseFloat(newWasteQty) || 0,
+        amount: parseFloat(newWasteAmount) || 0,
+        date: Date.now()
+      };
+      setWastes([waste, ...wastes]);
+      setNewWasteName('');
+      setNewWasteQty('');
+      setNewWasteAmount('');
+    }
+  };
+
+  const removeWaste = (id: string) => {
+    setWastes(wastes.filter(w => w.id !== id));
   };
 
   const financials = useMemo(() => {
@@ -371,12 +399,18 @@ export const Summary: React.FC<SummaryProps> = ({
       revenue: financials.revenue,
       cost: financials.cost,
       profit: financials.profit,
-      totalDebts: financials.totalDebts,
+      totalDebts: debts.reduce((sum, d) => sum + d.amount, 0),
       totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + p.amount, 0),
+      totalWasteValue: wastes.reduce((sum, w) => sum + w.amount, 0),
       salesCount: Object.keys(selectedRecipes).length + (linkOrdersToSales ? sales.filter(s => new Date(s.date).toISOString().split('T')[0] === summaryDate).length : 0),
       debtsCount: debts.length,
       unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0),
+      wasteQty: wastes.reduce((sum, w) => sum + w.quantity, 0),
+      products: Object.entries(selectedRecipes).map(([id, qty]) => ({ id, qty })),
       ingredientsNeeded,
+      debts: debts,
+      unsoldProducts: unsoldProducts,
+      wastes: wastes,
       consolidated: false
     };
     
@@ -388,6 +422,7 @@ export const Summary: React.FC<SummaryProps> = ({
     setSelectedRecipes({});
     onUpdateDebts([]);
     onUpdateUnsoldProducts([]);
+    setWastes([]);
   };
 
   const handleConsolidateArchive = () => {
@@ -503,6 +538,87 @@ export const Summary: React.FC<SummaryProps> = ({
     window.open(url, '_blank');
   };
 
+  const handleGeneralSummary = () => {
+    const archives = dailyArchives.filter(a => !a.consolidated);
+    if (archives.length === 0) return null;
+    
+    return archives.reduce((acc, a) => {
+      acc.revenue += a.revenue;
+      acc.cost += a.cost;
+      acc.profit += a.profit;
+      acc.totalDebts += a.totalDebts;
+      acc.totalUnsoldValue += a.totalUnsoldValue;
+      acc.salesCount += a.salesCount;
+      acc.debtsCount += a.debtsCount;
+      acc.unsoldQty += a.unsoldQty;
+      acc.totalWasteValue += a.totalWasteValue;
+      acc.wasteQty += a.wasteQty;
+      return acc;
+    }, {
+      revenue: 0, cost: 0, profit: 0, totalDebts: 0, totalUnsoldValue: 0,
+      salesCount: 0, debtsCount: 0, unsoldQty: 0, totalWasteValue: 0, wasteQty: 0
+    });
+  };
+
+  const handleDownloadGeneralDocx = () => {
+    const summary = handleGeneralSummary();
+    if (!summary) return;
+    
+    const content = `
+      <html>
+        <head><meta charset="utf-8"></head>
+        <body>
+          <h1>Reporte General - HorneFin</h1>
+          <p><strong>Resumen de ${dailyArchives.filter(a => !a.consolidated).length} días</strong></p>
+          <hr/>
+          <h2>Resumen Financiero</h2>
+          <ul>
+            <li><strong>Ingresos Brutos:</strong> $${summary.revenue.toFixed(2)}</li>
+            <li><strong>Costos de Producción:</strong> $${summary.cost.toFixed(2)}</li>
+            <li><strong>Ganancia Neta:</strong> $${summary.profit.toFixed(2)}</li>
+            <li><strong>Total Deudas:</strong> $${summary.totalDebts.toFixed(2)}</li>
+            <li><strong>Valor Productos Pendientes:</strong> $${summary.totalUnsoldValue.toFixed(2)}</li>
+            <li><strong>Valor Merma:</strong> $${summary.totalWasteValue.toFixed(2)}</li>
+          </ul>
+          <hr/>
+          <h2>Detalles Operativos</h2>
+          <ul>
+            <li><strong>Ventas (Cantidad):</strong> ${summary.salesCount}</li>
+            <li><strong>Deudas (Cantidad):</strong> ${summary.debtsCount}</li>
+            <li><strong>Productos Pendientes (Cantidad):</strong> ${summary.unsoldQty}</li>
+            <li><strong>Merma (Cantidad):</strong> ${summary.wasteQty}</li>
+          </ul>
+        </body>
+      </html>
+    `;
+    const blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Reporte_General_HorneFin.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleShareGeneralWhatsApp = () => {
+    const summary = handleGeneralSummary();
+    if (!summary) return;
+    
+    const text = `*Reporte General - HorneFin* 📊\n*Resumen de ${dailyArchives.filter(a => !a.consolidated).length} días*\n\n` +
+      `*Ingresos Brutos:* $${summary.revenue.toFixed(2)}\n` +
+      `*Costos de Producción:* $${summary.cost.toFixed(2)}\n` +
+      `*Ganancia Neta:* $${summary.profit.toFixed(2)}\n` +
+      `*Deudas:* $${summary.totalDebts.toFixed(2)}\n` +
+      `*Productos Pendientes:* $${summary.totalUnsoldValue.toFixed(2)}\n` +
+      `*Merma:* $${summary.totalWasteValue.toFixed(2)}\n\n` +
+      `Generado por HorneFin.`;
+    
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="pb-8 bg-stone-50 dark:bg-stone-950 min-h-screen transition-colors duration-300">
       <div className="bg-white dark:bg-stone-900 p-6 shadow-sm border-b border-stone-100 dark:border-stone-800 sticky top-0 z-20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -537,8 +653,8 @@ export const Summary: React.FC<SummaryProps> = ({
       <div className="p-4 space-y-6">
         {activeTab === 'OPERATIVA' ? (
           <>
-            {/* Panel Superior: 3 Columnas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Panel Superior: 4 Columnas */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
           {/* Columna 1: Ventas */}
           <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 flex flex-col">
@@ -762,6 +878,58 @@ export const Summary: React.FC<SummaryProps> = ({
             </div>
           </div>
 
+          {/* Columna 4: Merma */}
+          <div className="bg-white dark:bg-stone-900 p-5 rounded-3xl shadow-sm border border-stone-100 dark:border-stone-800 flex flex-col">
+            <h2 className="font-bold text-stone-800 dark:text-white mb-4">{t.waste || 'Merma'}</h2>
+            
+            <div className="flex flex-col gap-2 mb-4">
+              <input 
+                type="text" 
+                placeholder={t.productName || 'Nombre producto'} 
+                className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                value={newWasteName} 
+                onChange={(e) => setNewWasteName(e.target.value)} 
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input 
+                  type="number" 
+                  placeholder={t.qty || 'Cant.'} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newWasteQty} 
+                  onChange={(e) => setNewWasteQty(e.target.value)} 
+                />
+                <input 
+                  type="number" 
+                  placeholder={t.amount || 'Monto'} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newWasteAmount} 
+                  onChange={(e) => setNewWasteAmount(e.target.value)} 
+                />
+              </div>
+              <button 
+                onClick={addWaste} 
+                className="w-full py-2 bg-stone-600 text-white rounded-xl font-bold hover:bg-stone-700 text-sm flex items-center justify-center gap-2"
+              >
+                <Icons.Plus size={16} /> {t.addWaste || 'Agregar Merma'}
+              </button>
+            </div>
+            
+            <div className="space-y-2 flex-1 overflow-y-auto max-h-48">
+              {wastes.map(w => (
+                <div key={w.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center gap-2">
+                  <span className="font-medium text-stone-700 dark:text-stone-300 text-xs truncate flex-1">{w.name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-xs dark:text-white">${w.amount.toFixed(2)}</span>
+                    <button onClick={() => removeWaste(w.id)} className="text-stone-400 hover:text-red-500"><Icons.Close size={14} /></button>
+                  </div>
+                </div>
+              ))}
+              {wastes.length === 0 && (
+                <p className="text-center text-stone-400 text-xs py-4">{t.noWaste || 'No hay merma registrada.'}</p>
+              )}
+            </div>
+          </div>
+
         </div>
 
         {/* Panel Inferior: Dashboard de Balance */}
@@ -857,6 +1025,20 @@ export const Summary: React.FC<SummaryProps> = ({
 
             {dailyArchives.filter(a => !a.consolidated).length > 0 ? (
               <div className="space-y-4">
+                <div className="flex justify-end gap-2 mb-4">
+                  <button 
+                    onClick={handleDownloadGeneralDocx}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 text-sm flex items-center gap-2"
+                  >
+                    <Icons.Download size={16} /> {t.downloadGeneral || 'Descargar General'}
+                  </button>
+                  <button 
+                    onClick={handleShareGeneralWhatsApp}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 text-sm flex items-center gap-2"
+                  >
+                    <Icons.Share size={16} /> {t.shareGeneral || 'Compartir General'}
+                  </button>
+                </div>
                 {dailyArchives.filter(a => !a.consolidated).map(archive => (
                   <div key={archive.id} className="p-5 bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
@@ -878,6 +1060,13 @@ export const Summary: React.FC<SummaryProps> = ({
                           title="Compartir por WhatsApp"
                         >
                           <Icons.Share size={16} />
+                        </button>
+                        <button 
+                          onClick={() => onDeleteArchive(archive.id)}
+                          className="p-2 bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+                          title="Eliminar Registro"
+                        >
+                          <Icons.Trash size={16} />
                         </button>
                       </div>
                     </div>

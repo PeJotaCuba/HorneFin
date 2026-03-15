@@ -97,6 +97,14 @@ export interface Sale {
   type: 'ONE_TIME' | 'RECURRING';
 }
 
+export interface Waste {
+  id: string;
+  name: string;
+  quantity: number;
+  amount: number;
+  date: number;
+}
+
 export interface DailyArchiveRecord {
   id: string;
   date: number;
@@ -106,10 +114,16 @@ export interface DailyArchiveRecord {
   profit: number;
   totalDebts: number;
   totalUnsoldValue: number;
+  totalWasteValue: number;
   salesCount: number;
   debtsCount: number;
   unsoldQty: number;
+  wasteQty: number;
+  products: any[]; // Or specific interface if available
   ingredientsNeeded: Record<string, { name: string, quantity: number }>;
+  debts: any[];
+  unsoldProducts: any[];
+  wastes: Waste[];
   consolidated: boolean;
 }
 
