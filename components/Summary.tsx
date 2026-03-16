@@ -430,7 +430,10 @@ export const Summary: React.FC<SummaryProps> = ({
       debtsCount: debts.length,
       unsoldQty: unsoldProducts.reduce((sum, p) => sum + p.quantity, 0),
       wasteQty: wastes.reduce((sum, w) => sum + w.quantity, 0),
-      products: Object.entries(selectedRecipes).map(([id, qty]) => ({ id, qty })),
+      products: Object.entries(selectedRecipes).map(([id, qty]) => {
+        const recipe = recipes.find(r => r.id === id);
+        return { name: recipe ? recipe.name : 'Desconocido', qty };
+      }),
       ingredientsNeeded,
       debts: debts,
       unsoldProducts: unsoldProducts,
@@ -538,7 +541,7 @@ export const Summary: React.FC<SummaryProps> = ({
           <h2>Detalles Operativos</h2>
           <h3>Productos</h3>
           <ul>
-            ${archive.products.map(p => `<li>Producto ID: ${p.id}, Cantidad: ${p.qty}</li>`).join('')}
+            ${archive.products.map(p => `<li>${p.name}: ${p.qty}</li>`).join('')}
           </ul>
           <h3>Deudas</h3>
           <ul>
@@ -576,6 +579,7 @@ export const Summary: React.FC<SummaryProps> = ({
       `Pendientes: $${archive.totalUnsoldValue.toFixed(2)}\n` +
       `Merma: $${archive.totalWasteValue.toFixed(2)}\n\n` +
       `*Ingredientes:*\n${Object.values(archive.ingredientsNeeded).map(ing => `${ing.name}: ${ing.quantity.toFixed(2)}`).join('\n')}\n\n` +
+      `*Productos:*\n${archive.products.map(p => `${p.name}: ${p.qty}`).join('\n')}\n\n` +
       `*Deudas:*\n${archive.debts.map(d => `${d.debtorName}: ${d.product} ($${d.amount.toFixed(2)})`).join('\n')}\n\n` +
       `*Pendientes:*\n${archive.unsoldProducts.map(p => `${p.name}: ${p.quantity} ($${p.amount.toFixed(2)})`).join('\n')}\n\n` +
       `*Merma:*\n${archive.wastes.map(w => `${w.name}: ${w.quantity} ($${w.amount.toFixed(2)})`).join('\n')}\n\n` +
@@ -1116,7 +1120,7 @@ export const Summary: React.FC<SummaryProps> = ({
                       </p>
                       <div className="text-xs text-stone-600 dark:text-stone-400 grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                         <div><strong>Ingredientes:</strong> {Object.values(archive.ingredientsNeeded).map(i => `${i.name}: ${i.quantity.toFixed(2)}`).join(', ')}</div>
-                        <div><strong>Productos:</strong> {archive.products.map(p => `ID: ${p.id}, Cant: ${p.qty}`).join(', ')}</div>
+                        <div><strong>Productos:</strong> {archive.products.map(p => `${p.name}: ${p.qty}`).join(', ')}</div>
                         <div><strong>Deudas:</strong> {archive.debts.map(d => `${d.debtorName}: $${d.amount.toFixed(2)}`).join(', ')}</div>
                         <div><strong>Pendientes:</strong> {archive.unsoldProducts.map(p => `${p.name}: ${p.quantity}`).join(', ')}</div>
                         <div><strong>Merma:</strong> {archive.wastes.map(w => `${w.name}: ${w.quantity}`).join(', ')}</div>
