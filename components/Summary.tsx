@@ -604,10 +604,20 @@ export const Summary: React.FC<SummaryProps> = ({
       acc.unsoldQty += a.unsoldQty;
       acc.totalWasteValue += a.totalWasteValue;
       acc.wasteQty += a.wasteQty;
+      
+      Object.entries(a.ingredientsNeeded).forEach(([key, ing]) => {
+        if (acc.ingredientsNeeded[key]) {
+          acc.ingredientsNeeded[key].quantity += ing.quantity;
+        } else {
+          acc.ingredientsNeeded[key] = { name: ing.name, quantity: ing.quantity };
+        }
+      });
+      
       return acc;
     }, {
       revenue: 0, cost: 0, profit: 0, totalDebts: 0, totalUnsoldValue: 0,
-      salesCount: 0, debtsCount: 0, unsoldQty: 0, totalWasteValue: 0, wasteQty: 0
+      salesCount: 0, debtsCount: 0, unsoldQty: 0, totalWasteValue: 0, wasteQty: 0,
+      ingredientsNeeded: {} as Record<string, { name: string, quantity: number }>
     });
   };
 
@@ -639,6 +649,10 @@ export const Summary: React.FC<SummaryProps> = ({
             <li><strong>Productos Pendientes (Cantidad):</strong> ${summary.unsoldQty}</li>
             <li><strong>Merma (Cantidad):</strong> ${summary.wasteQty}</li>
           </ul>
+          <h2>Ingredientes Utilizados</h2>
+          <ul>
+            ${Object.values(summary.ingredientsNeeded).map(ing => `<li>${ing.name}: ${ing.quantity.toFixed(2)}</li>`).join('')}
+          </ul>
         </body>
       </html>
     `;
@@ -664,6 +678,7 @@ export const Summary: React.FC<SummaryProps> = ({
       `*Deudas:* $${summary.totalDebts.toFixed(2)}\n` +
       `*Productos Pendientes:* $${summary.totalUnsoldValue.toFixed(2)}\n` +
       `*Merma:* $${summary.totalWasteValue.toFixed(2)}\n\n` +
+      `*Ingredientes Utilizados:*\n${Object.values(summary.ingredientsNeeded).map(ing => `${ing.name}: ${ing.quantity.toFixed(2)}`).join('\n')}\n\n` +
       `Generado por HorneFin.`;
     
     const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
