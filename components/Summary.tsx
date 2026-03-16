@@ -283,12 +283,12 @@ export const Summary: React.FC<SummaryProps> = ({
 
     const categorizeIngredient = (name: string) => {
       const lower = name.toLowerCase();
-      if (lower.includes('harina') || lower.includes('flour')) return 'Harina';
-      if (lower.includes('azúcar') || lower.includes('azucar') || lower.includes('sugar')) return 'Azúcar';
-      if (lower.includes('huevo') || lower.includes('egg')) return 'Huevo';
-      if (lower.includes('aceite') || lower.includes('oil')) return 'Aceite';
-      if (lower.includes('leche') || lower.includes('milk')) return 'Leche';
-      return 'Otros';
+      if (lower.includes('harina') || lower.includes('flour')) return t.flour || 'Harina';
+      if (lower.includes('azúcar') || lower.includes('azucar') || lower.includes('sugar')) return t.sugar || 'Azúcar';
+      if (lower.includes('huevo') || lower.includes('egg')) return t.egg || 'Huevo';
+      if (lower.includes('aceite') || lower.includes('oil')) return t.oil || 'Aceite';
+      if (lower.includes('leche') || lower.includes('milk')) return t.milk || 'Leche';
+      return t.others || 'Otros';
     };
 
     const processRecipe = (recipe: Recipe, count: number) => {
@@ -1051,7 +1051,7 @@ export const Summary: React.FC<SummaryProps> = ({
                       outerRadius={80}
                       paddingAngle={5}
                       dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      label={({ payload, percent }) => `${payload.name} ${(percent * 100).toFixed(0)}%`}
                       labelLine={false}
                     >
                       {financials.pieData.map((entry, index) => (
