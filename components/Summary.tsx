@@ -69,9 +69,11 @@ export const Summary: React.FC<SummaryProps> = ({
 
   // Merma State
   const [wastes, setWastes] = useState<Waste[]>([]);
-  const [newWasteName, setNewWasteName] = useState('');
+  const [newWasteRecipeId, setNewWasteRecipeId] = useState('');
   const [newWasteQty, setNewWasteQty] = useState('');
+  const [newWasteUnitPrice, setNewWasteUnitPrice] = useState('');
   const [newWasteAmount, setNewWasteAmount] = useState('');
+  const [newWasteIsBatch, setNewWasteIsBatch] = useState(false);
 
   // Productos State
   const [newUnsoldRecipeId, setNewUnsoldRecipeId] = useState('');
@@ -225,19 +227,41 @@ export const Summary: React.FC<SummaryProps> = ({
     onUpdateUnsoldProducts(unsoldProducts.filter(p => p.id !== id));
   };
 
+  useEffect(() => {
+    if (newWasteRecipeId) {
+      const recipe = recipes.find(r => r.id === newWasteRecipeId);
+      if (recipe) {
+        const price = getRecipeSuggestedPrice(recipe);
+        const unitPrice = newWasteIsBatch ? price * (recipe.batchSize || 1) : price;
+        setNewWasteUnitPrice(unitPrice.toFixed(2));
+      }
+    } else {
+      setNewWasteUnitPrice('');
+    }
+  }, [newWasteRecipeId, newWasteIsBatch, recipes, pantry]);
+
+  useEffect(() => {
+    const unitPrice = parseFloat(newWasteUnitPrice) || 0;
+    const qty = parseFloat(newWasteQty) || 0;
+    setNewWasteAmount((unitPrice * qty).toFixed(2));
+  }, [newWasteUnitPrice, newWasteQty]);
+
   const addWaste = () => {
-    if (newWasteName && newWasteQty && newWasteAmount) {
+    if (newWasteRecipeId && newWasteQty && newWasteAmount) {
+      const recipe = recipes.find(r => r.id === newWasteRecipeId);
       const waste: Waste = {
         id: Date.now().toString(),
-        name: newWasteName,
+        name: recipe ? recipe.name : '',
         quantity: parseFloat(newWasteQty) || 0,
         amount: parseFloat(newWasteAmount) || 0,
         date: Date.now()
       };
       setWastes([waste, ...wastes]);
-      setNewWasteName('');
+      setNewWasteRecipeId('');
       setNewWasteQty('');
+      setNewWasteUnitPrice('');
       setNewWasteAmount('');
+      setNewWasteIsBatch(false);
     }
   };
 
@@ -906,20 +930,38 @@ export const Summary: React.FC<SummaryProps> = ({
             <h2 className="font-bold text-stone-800 dark:text-white mb-4">{t.waste || 'Merma'}</h2>
             
             <div className="flex flex-col gap-2 mb-4">
-              <input 
-                type="text" 
-                placeholder={t.productName || 'Nombre producto'} 
-                className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
-                value={newWasteName} 
-                onChange={(e) => setNewWasteName(e.target.value)} 
-              />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="flex gap-2 items-center">
+                <select 
+                  className="flex-1 p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newWasteRecipeId}
+                  onChange={e => setNewWasteRecipeId(e.target.value)}
+                >
+                  <option value="">{t.selectProduct || 'Seleccionar producto...'}</option>
+                  {recipes.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+                {newWasteRecipeId && recipes.find(r => r.id === newWasteRecipeId)?.mode === 'BATCH' && (
+                   <label className="flex items-center gap-1 text-xs text-stone-500 cursor-pointer">
+                     <input type="checkbox" checked={newWasteIsBatch} onChange={e => setNewWasteIsBatch(e.target.checked)} className="rounded text-indigo-600 focus:ring-indigo-500" />
+                     {t.batch || 'Lote'}
+                   </label>
+                )}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <input 
                   type="number" 
                   placeholder={t.qty || 'Cant.'} 
                   className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
                   value={newWasteQty} 
                   onChange={(e) => setNewWasteQty(e.target.value)} 
+                />
+                <input 
+                  type="number" 
+                  placeholder={t.unitPrice || 'Precio U.'} 
+                  className="p-2 bg-stone-50 dark:bg-stone-800 rounded-xl border border-stone-200 dark:border-stone-700 dark:text-white text-sm"
+                  value={newWasteUnitPrice} 
+                  onChange={(e) => setNewWasteUnitPrice(e.target.value)} 
                 />
                 <input 
                   type="number" 
@@ -940,7 +982,10 @@ export const Summary: React.FC<SummaryProps> = ({
             <div className="space-y-2 flex-1 overflow-y-auto max-h-48">
               {wastes.map(w => (
                 <div key={w.id} className="p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 flex justify-between items-center gap-2">
-                  <span className="font-medium text-stone-700 dark:text-stone-300 text-xs truncate flex-1">{w.name}</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium text-stone-700 dark:text-stone-300 text-xs truncate">{w.name}</span>
+                    <span className="text-[10px] text-stone-500">Cant: {w.quantity}</span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-xs dark:text-white">${w.amount.toFixed(2)}</span>
                     <button onClick={() => removeWaste(w.id)} className="text-stone-400 hover:text-red-500"><Icons.Close size={14} /></button>
