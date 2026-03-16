@@ -398,7 +398,7 @@ export const Summary: React.FC<SummaryProps> = ({
       dateLabel: summaryDate,
       revenue: financials.revenue,
       cost: financials.cost,
-      profit: financials.profit,
+      profit: financials.profit - wastes.reduce((sum, w) => sum + w.amount, 0),
       totalDebts: debts.reduce((sum, d) => sum + d.amount, 0),
       totalUnsoldValue: unsoldProducts.reduce((sum, p) => sum + p.amount, 0),
       totalWasteValue: wastes.reduce((sum, w) => sum + w.amount, 0),
@@ -1067,8 +1067,15 @@ export const Summary: React.FC<SummaryProps> = ({
                     <div>
                       <h3 className="font-bold text-lg text-stone-900 dark:text-white">{archive.dateLabel}</h3>
                       <p className="text-sm text-stone-500 mb-3">
-                        Ventas: {archive.salesCount} | Deudas: {archive.debtsCount} | Pendientes: {archive.unsoldQty}
+                        Ventas: {archive.salesCount} | Deudas: {archive.debtsCount} | Pendientes: {archive.unsoldQty} | Merma: {archive.wasteQty}
                       </p>
+                      <div className="text-xs text-stone-600 dark:text-stone-400 grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                        <div><strong>Ingredientes:</strong> {Object.values(archive.ingredientsNeeded).map(i => `${i.name}: ${i.quantity.toFixed(2)}`).join(', ')}</div>
+                        <div><strong>Productos:</strong> {archive.products.map(p => `ID: ${p.id}, Cant: ${p.qty}`).join(', ')}</div>
+                        <div><strong>Deudas:</strong> {archive.debts.map(d => `${d.debtorName}: $${d.amount.toFixed(2)}`).join(', ')}</div>
+                        <div><strong>Pendientes:</strong> {archive.unsoldProducts.map(p => `${p.name}: ${p.quantity}`).join(', ')}</div>
+                        <div><strong>Merma:</strong> {archive.wastes.map(w => `${w.name}: ${w.quantity}`).join(', ')}</div>
+                      </div>
                       <div className="flex gap-2">
                         <button 
                           onClick={() => handleDownloadArchiveDocx(archive)}
